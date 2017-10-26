@@ -7,9 +7,6 @@ This project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html
 ### Added
 * Changelog
 
-### Changed
-* F-1 - Vertical clamp strategy overhaul
-
 ## [1.0.0] - 2017-10-26
 ### Added
 * Initial commit
