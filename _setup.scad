@@ -79,6 +79,18 @@ module pos_camera(
 	children();
 }
 
+module pos_landing_gear(
+		clamp_thickness = FRAME_CLAMP_THICKNESS_BOT,
+		h = LG_HEIGHT,
+		strut_dim = STRUT_DIM,
+		width = LG_WIDTH,
+	) {
+	pos_struts(show = [false, true])
+	translate([strut_dim[0] / 2 - 10 - width / 2, 0, clamp_thickness + strut_dim[2] / 2 + h])
+	rotate([90, 0, 90])
+	children();
+}
+
 module pos_motor(i = 1) {
 	translate(SIZE / 2 * i)
 	children();

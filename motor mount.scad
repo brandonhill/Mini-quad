@@ -148,7 +148,7 @@ module shape_motor_strut_clamp(
 
 			pos_motor_clamp_screws(outset = false, show_outer = false)
 			rotate([0, 0, -boom_angle])
-			square(20, true);
+			square(20, true); // arbitrary! TODO: restore CLAMP_LENGTH param
 		}
 
 		offset(delta = clamp_width + TOLERANCE_FIT)
@@ -197,13 +197,14 @@ module shape_motor_mount(
 module motor_mount(
 		boom_angle = BOOM_ANGLE,
 		boom_thickness = BOOM_THICKNESS,
-		clamp_length = FRAME_CLAMP_LENGTH,
+//		clamp_length = FRAME_CLAMP_LENGTH,
 		clamp_thickness_bot = FRAME_CLAMP_THICKNESS_BOT,
 		clamp_thickness_top = FRAME_CLAMP_THICKNESS_TOP,
 		clearance_dim = MOTOR_CLEARANCE_DIM,
+		col,
 		front = false,
 		height = BOOM_HEIGHT,
-		landing_gear_height = LANDING_GEAR_HEIGHT,
+		landing_gear_height = LG_HEIGHT,
 		mount_outset = MOTOR_MOUNT_OUTSET,
 		mount_rad = MOTOR_MOUNT_RAD,
 		motor_screw_dim = MOTOR_SCREW_DIM,
@@ -219,7 +220,7 @@ module motor_mount(
 	clamp_thickness = top ? clamp_thickness_top : clamp_thickness_bot;
 
 	difference() {
-		color(PRINT_COLOUR != undef ? PRINT_COLOUR : undef)
+		color(col != undef ? col : undef)
 		union() {
 
 			// motor mount

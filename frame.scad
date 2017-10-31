@@ -40,9 +40,10 @@ module shape_frame_clamps(
 
 module shape_frame(
 		batt_dim = BATT_DIM,
-		batt_strap_dim = STRAP_HOLE_DIM,
+		batt_strap_dim = BATT_STRAP_DIM,
 		boom_angle = BOOM_ANGLE,
 		boom_dim = BOOM_DIM,
+		braces = true,
 		buzzer_pos = BUZZER_POS,
 		cam_dim = CAM_HOUSING_DIM,
 		clamp_width = FRAME_CLAMP_WIDTH,
@@ -78,46 +79,18 @@ module shape_frame(
 
 	if (top) {
 
-		// cam mount
-		*difference() {
-			pos_frame_screws(show = [true, false]) {
-				translate([0, -6])
-				square([clamp_width * 2, 12], true);
-
-				translate([0, -10])
-				rotate([0, 0, boom_angle])
-				translate([0, -3])
-				square([clamp_width * 2, 6], true);
-			}
-
-			// cam cutout
-			square([boom_dim[0], cam_dim[0] + TOLERANCE_FIT * 2], true);
-
-			// remove back
-			translate([-boom_dim[0] / 2, 0])
-			square(boom_dim[0], true);
-		}
-
 		// antenna mount
 		shape_ant_mount();
-
-		// buzzer mount
-		translate([0, plate_thickness / 2])
-		translate(buzzer_pos)
-		square([dim[0] / 2, plate_thickness], true);
 
 		// cam mount
 		shape_camera_mount();
 
-		// rx mount
-		translate([0, -(rx_dim[2] + plate_thickness) / 2])
-		translate(rx_pos)
-		square([dim[0] * 0.75, plate_thickness], true);
+	} else if (braces) {
 
 		// vtx mount
-		translate([plate_thickness / 2 + vtx_dim[2] / 2, 0])
-		translate(vtx_pos)
-		square([plate_thickness, dim[0] / 2], true);
+		translate([vtx_pos[0] + vtx_dim[2] / 2 + dim[0] / 4, 0])
+		rotate([0, 0, 90])
+		t([dim[1] / 2, dim[0] / 4], plate_thickness, center = false);
 	}
 }
 
@@ -160,6 +133,7 @@ module pos_frame_screws(
 }
 
 module fc_mount_post(
+		col,
 		h_post = FC_MOUNT_HEIGHT,
 		nut_dim = FC_MOUNT_NUT_DIM,
 		pitch = FC_MOUNT_THREAD_PITCH,
@@ -168,11 +142,11 @@ module fc_mount_post(
 		tolerance = TOLERANCE_CLEAR,
 	) {
 
-	color(PRINT_COLOUR != undef ? PRINT_COLOUR : undef) {
+	color(col != undef ? col : undef) {
 		cylinder(h = h_post, r = r * 2);
 
 		translate([0, 0, h_post]) {
-			if (FINAL_RENDER) {
+			if (false && FINAL_RENDER) {
 				metric_thread(diameter = r * 2, pitch = pitch, length = h_threads);
 			} else {
 				cylinder(h = thickness + nut_dim[2], r = r);
@@ -195,29 +169,42 @@ module pos_fc_holes(
 	children();
 }
 
-module fc_mount_posts() {
+module fc_mount_posts(col) {
 	pos_fc_holes()
-	fc_mount_post();
+	fc_mount_post(col);
 }
 
 module frame(
 		ant_nut_dim = SMA_NUT_DIM,
 		batt_dim = BATT_DIM,
-		batt_strap_dim = STRAP_HOLE_DIM,
+		batt_strap_dim = BATT_STRAP_DIM,
 		boom_angle = BOOM_ANGLE,
 		boom_dim = BOOM_DIM,
+		buzzer_dim = BUZZER_DIM,
+		buzzer_pos = BUZZER_POS,
 		cam_screw_dim = CAM_SCREW_DIM,
 		clamp_thickness_bot = FRAME_CLAMP_THICKNESS_BOT,
 		clamp_thickness_top = FRAME_CLAMP_THICKNESS_TOP,
 		clamp_width = FRAME_CLAMP_WIDTH,
+		col,
 		dim = FRAME_DIM,
+		frame_height = FRAME_HEIGHT,
 		motor_angle = BOOM_ANGLE,
+		mount_dim = COMPONENT_MOUNT_DIM,
+		mount_thickness = COMPONENT_MOUNT_THICKNESS,
 		nut_dim = FRAME_CLAMP_NUT_DIM,
 		top = false,
+		pdb_dim = PDB_DIM,
+		pdb_rot = PDB_ROT,
 		plate_thickness = FRAME_PLATE_THICKNESS,
+		rx_dim = RX_DIM,
+		rx_pos = RX_POS,
 		screw_dim = FRAME_CLAMP_SCREW_DIM,
 		screw_length = FRAME_CLAMP_SCREW_LENGTH,
 		screw_surround = FRAME_CLAMP_SCREW_SURROUND,
+		vtx_dim = VTX_DIM,
+		vtx_pos = VTX_POS,
+		zip_tie_dim = ZIP_TIE_DIM,
 	) {
 
 	clamp_thickness = top ? clamp_thickness_top : clamp_thickness_bot;
@@ -227,10 +214,10 @@ module frame(
 	// fc mounts
 	if (top)
 	scale([1, 1, -1])
-	fc_mount_posts();
+	fc_mount_posts(col);
 
 	difference() {
-		color(PRINT_COLOUR != undef ? PRINT_COLOUR : undef)
+		color(col != undef ? col : undef)
 		union() {
 
 			// boom clamps
@@ -239,7 +226,7 @@ module frame(
 
 			linear_extrude(h, convexity = 2)
 			smooth_acute(1)
-			shape_frame(top = top);
+			shape_frame(braces = false, top = top);
 
 			// need to get skinny stuff, so no smoothing here
 			linear_extrude(h, convexity = 2)
@@ -260,7 +247,24 @@ module frame(
 			pos_frame_screws(hull = true)
 			screw_surround(dim = screw_dim, h = h, tolerance = TOLERANCE_CLEAR, walls = screw_surround);
 
-			if (!top) {
+			if (top) {
+
+				// buzzer mount
+				l = buzzer_pos[1] - buzzer_dim[0] * 0.125;
+				*translate([0, 0, 0])
+				translate([buzzer_pos[0], 0, h - plate_thickness])
+				linear_extrude(plate_thickness)
+				difference() {
+					polygon([
+						[0, 0],
+						[l, l],
+						[-l, l],
+					]);
+					translate([0, buzzer_pos[1]])
+					circle(buzzer_dim[0] / 2 + TOLERANCE_FIT);
+				}
+			} else {
+
 				// plate
 				difference() {
 					linear_extrude(h, convexity = 2)
@@ -287,10 +291,28 @@ module frame(
 			}
 		}
 
-		// ant hole
-		if (top)
-		pos_ant(z = 0)
-		cylinder(h = clamp_thickness * 2, r = ant_nut_dim[0] / 2 + TOLERANCE_CLEAR, center = true);
+		if (top) {
+
+			// ant hole
+			pos_ant(z = 0)
+			cylinder(h = clamp_thickness * 2, r = ant_nut_dim[0] / 2 + TOLERANCE_CLEAR, center = true);
+
+			// batt wire zip tie hole
+			// manual! TODO: automate
+			translate([-dim[0] / 2 + 5, dim[1] / 2 - 5, h / 2])
+			rotate([0, 0, boom_angle - 12])
+			translate([-10, -3])
+			cube([zip_tie_dim[0] + TOLERANCE_FIT * 2, zip_tie_dim[1] + TOLERANCE_FIT * 2, h * 2], true);
+
+			// pdb cutout
+			translate([0, 0, pdb_dim[2] / 2])
+			rotate(pdb_rot)
+			cube([
+				pdb_dim[0] + TOLERANCE_FIT * 2,
+				pdb_dim[1] + TOLERANCE_FIT * 2,
+				pdb_dim[2] + TOLERANCE_FIT,
+				], true);
+		}
 
 		// booms
 		translate([0, 0, clamp_thickness])
@@ -319,9 +341,61 @@ module frame(
 		}
 	}
 
+	color(col != undef ? col : undef)
+	if (top) {
+
+		// pdb retention tabs
+		pos_booms()
+		translate([pdb_dim[0] / 2 + TOLERANCE_FIT, 0, TOLERANCE_FIT])
+		rotate([-90, 0])
+		pie(135, clamp_width / 2, boom_dim[1] + (TOLERANCE_FIT + clamp_width) * 2, center = true);
+
+	} else {
+
+		difference() {
+			union() {
+				// buzzer mount
+				translate([0, buzzer_pos[1] + 2.5 - 1, h])
+				rotate([0, -90, 90])
+				beam_u([buzzer_dim[0] * 2/3 + batt_strap_dim[1] + TOLERANCE_CLEAR, mount_dim[1], batt_strap_dim[0] + (TOLERANCE_CLEAR + mount_thickness) * 2], mount_thickness, center = false, convexity = 2);
+
+				// rx mount
+				translate([0, rx_pos[1] - mount_dim[1] - rx_dim[2] / 2, h])
+				rotate([0, -90, -90])
+				beam_u([
+					rx_dim[1] * 2/3 + batt_strap_dim[1] + TOLERANCE_CLEAR, mount_dim[1],
+					batt_strap_dim[0] + (TOLERANCE_CLEAR + mount_thickness) * 2], mount_thickness, center = false, convexity = 2);
+			}
+
+			// battery strap cutout
+			translate([0, 0, h])
+			rotate([90, 0])
+			linear_extrude(dim[1], center = true)
+			hull()
+			reflect()
+			translate([(batt_strap_dim[0] - batt_strap_dim[1]) / 2 + TOLERANCE_CLEAR, batt_strap_dim[1] / 2])
+			circle(batt_strap_dim[1] / 2);
+
+			// buzzer cutout
+			translate([0, 0, h])
+			rotate([0, -90, 90])
+			linear_extrude(dim[1] / 2, convexity = 2)
+			translate([buzzer_pos[2] - h, 0])
+			circle(buzzer_dim[0] / 2 + TOLERANCE_FIT);
+		}
+
+		// vtx mount
+		translate([vtx_pos[0] + vtx_dim[2] / 2 + mount_dim[1], 0])
+		rotate([0, -90, 0])
+		beam_t([vtx_dim[1] * 2/3, mount_dim[0], mount_dim[1]], mount_thickness, center = false);
+	}
+
 	// dim check
 *
 	#
 	translate([0, 0, -20])
 	cube([dim[0], dim[1], 1], true);
 }
+
+*
+frame();

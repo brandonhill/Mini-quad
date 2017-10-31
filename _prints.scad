@@ -7,7 +7,7 @@ use <frame.scad>;
 use <motor mount.scad>;
 
 // Caution! This renders threads on the FC mount posts, and takes a long time
-//FINAL_RENDER = true;
+FINAL_RENDER = true;
 
 echo(str("Booms = ", BOOM_DIM));
 echo(str("Struts = ", STRUT_DIM));

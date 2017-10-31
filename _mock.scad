@@ -1,11 +1,18 @@
 
-//PRINT_COLOUR = COLOUR_GREY_DARK;
-PRINT_COLOUR = "Lime";
+include <_setup.scad>;
 
-include <_conf.scad>;
-use <_setup.scad>;
-use <canopy.scad>;
+MOCK_CAM_ANGLE = CAM_ANGLE; // test movement
+
+PRINT_COLOUR_CANOPY = COLOUR_GREY_DARK;
+PRINT_FRAME_COLOUR_BOT = COLOUR_GREY_DARK;
+PRINT_FRAME_COLOUR_TOP = "lime";
+PRINT_MOTOR_MOUNT_COLOUR_BOT = COLOUR_GREY_DARK;
+PRINT_MOTOR_MOUNT_COLOUR_TOP = "lime";
+
+include <antenna mount.scad>;
+include <canopy.scad>;
 include <frame.scad>;
+include <landing gear.scad>;
 include <motor mount.scad>;
 
 print([
@@ -23,23 +30,43 @@ print(["Struts = ", STRUT_DIM]);
 *
 mock_battery();
 
-translate([0, 0, LANDING_GEAR_HEIGHT]) {
 //*
+pos_landing_gear()
+landing_gear(col = PRINT_FRAME_COLOUR_BOT);
+
+translate([0, 0, LG_HEIGHT])
+union() {
+//	*
 	mock_ant_conn();
 
-//*
+//	*
+	pos_ant()
+	translate([0, 0, 12])
+	5g_cp_antenna(30, wire_awg = ANT_WIRE_AWG);
+
+//	*
+	ant_clip(col = PRINT_FRAME_COLOUR_BOT)
+	mock_rx_ant(pos = [0, 0, FRAME_HEIGHT - 4], rot = [-90, 0, 45]);
+
+//	*
 	mock_buzzer();
 
-//*
+//	*
 	mock_camera();
 
-//*
+//	*
+	pos_escs()
+	mock_esc();
+
+//	*
 	translate([0, 0, FRAME_CLAMP_THICKNESS_BOT])
 	mock_frame_stock();
 
-//*
-//show_half()
+//	*
 %
+//	color(PRINT_COLOUR_CANOPY)
+	show_half(r = [0, 0, 0])//180])
+	translate([0, 0, 0.1])
 	canopy();
 
 //*
@@ -47,19 +74,18 @@ translate([0, 0, LANDING_GEAR_HEIGHT]) {
 
 //*
 	union() {
+//*
 		translate([0, 0, BOOM_HEIGHT + FRAME_CLAMP_THICKNESS_BOT + FRAME_CLAMP_THICKNESS_TOP + 0.1])
 		scale([1, 1, -1])
-		frame(top = true);
+		frame(col = PRINT_FRAME_COLOUR_TOP, top = true);
 
 //*
 //%
-		frame();
+		frame(col = PRINT_FRAME_COLOUR_BOT);
 	}
 
 //*
-	pos_ant()
-	translate([0, 0, 12])
-	5g_cp_antenna(30);
+	mock_pdb();
 
 //*
 	mock_rx();
@@ -69,29 +95,36 @@ translate([0, 0, LANDING_GEAR_HEIGHT]) {
 }
 
 //*
-translate([0, 0, LANDING_GEAR_HEIGHT]) {
+translate([0, 0, LG_HEIGHT]) {
 	reflect(x = false) {
-		motor_mount(front = true, top = false);
+		motor_mount(
+			col = PRINT_MOTOR_MOUNT_COLOUR_BOT,
+			front = true,
+			top = false);
 
 		translate([0, 0, BOOM_DIM[2] + FRAME_CLAMP_THICKNESS_BOT + FRAME_CLAMP_THICKNESS_TOP])
 		scale([1, 1, -1])
-		motor_mount(front = true);
+		motor_mount(
+			col = PRINT_MOTOR_MOUNT_COLOUR_TOP,
+			front = true);
 	}
 
 	mirror([1, 0])
 	reflect(x = false) {
-		motor_mount(top = false);
+		motor_mount(
+			col = PRINT_MOTOR_MOUNT_COLOUR_BOT,
+			top = false);
 
 		translate([0, 0, BOOM_DIM[2] + FRAME_CLAMP_THICKNESS_BOT + FRAME_CLAMP_THICKNESS_TOP])
 		scale([1, 1, -1])
-		motor_mount();
+		motor_mount(col = PRINT_MOTOR_MOUNT_COLOUR_TOP);
 	}
 }
 
 //*
 pos_motors() {
 
-	translate([0, 0, LANDING_GEAR_HEIGHT + FRAME_HEIGHT + 1]) {
+	translate([0, 0, LG_HEIGHT + FRAME_HEIGHT + 1]) {
 //*
 		mock_motor();
 
@@ -117,7 +150,7 @@ module mock_battery(dim = BATT_DIM) {
 module mock_buzzer(dim = BUZZER_DIM, pos = BUZZER_POS, rot = BUZZER_ROT) {
 	translate(pos)
 	rotate(rot)
-	buzzer_piezo(h = dim[1], r = dim[0] / 2, wires = false);
+	buzzer_piezo(h = dim[1], r = dim[0] / 2, pins = true, wires = false);
 }
 
 module mock_camera(
@@ -129,9 +162,27 @@ module mock_camera(
 
 	translate(pos)
 //	rotate([0, -angle]) // pivot
+	rotate([0, -rot[1] - MOCK_CAM_ANGLE])
 	rotate(rot)
 	translate([pivot_offset, 0]) // move back to pivot
 	cam_runcam_swift_micro();
+}
+
+module pos_escs() {
+	pos_booms()
+	children();
+}
+
+module mock_esc(pos = ESC_POS, rot = ESC_ROT) {
+	translate(pos)
+	rotate(rot)
+	color(COLOUR_GREY_DARK) {
+		cube(ESC_DIM, true);
+
+		translate([ESC_DIM[0] / 2 - ESC_CAP_DIM[1] / 2, 0, -(ESC_DIM[2] + ESC_CAP_DIM[0]) / 2])
+		rotate([0, 90])
+		cylinder(h = ESC_CAP_DIM[1], r = ESC_CAP_DIM[0] / 2, center = true);
+	}
 }
 
 module mock_fc(pos = FC_POS, rot = FC_ROT) {
@@ -166,6 +217,13 @@ module mock_motor(d = MOTOR_DIM, shaft_r = MOTOR_SHAFT_RAD) {
 	);
 }
 
+module mock_pdb(dim = PDB_DIM, rot = PDB_ROT) {
+	translate([0, 0, FRAME_HEIGHT - dim[2] / 2 + TOLERANCE_FIT])
+	rotate(rot)
+	color(COLOUR_COPPER)
+	cube(dim, true);
+}
+
 module mock_prop(r = PROP_RAD) {
 	%
 	color("aqua")
@@ -178,6 +236,16 @@ module mock_rx(dim = RX_DIM, pos = RX_POS, rot = RX_ROT) {
 	translate(pos)
 	rotate(rot)
 	rx_frsky_xm_plus();
+}
+
+module mock_rx_ant(l = 40, pos = [], rot = []) {
+	translate(pos)
+	rotate(rot)
+	color("gray")
+	for (a = [0, 90])
+	rotate([0, a])
+	translate([0, 0, 6])
+	cylinder(h = l, r = 0.5);
 }
 
 module mock_vtx(pos = VTX_POS, rot = VTX_ROT) {

@@ -2,9 +2,6 @@
 include <_setup.scad>;
 use <frame.scad>;
 
-CANOPY_CLIP_WIDTH_BACK = 8;
-CANOPY_CLIP_WIDTH_FRONT = 4;
-
 module pos_canopy_clips_back(
 		boom_angle = BOOM_ANGLE,
 		frame_dim = FRAME_DIM,
@@ -23,7 +20,6 @@ module pos_canopy_clips_back(
 		children();
 	}
 }
-
 
 module pos_canopy_clips_front(
 		boom_angle = BOOM_ANGLE,
@@ -89,7 +85,9 @@ module shape_canopy_clip(
 module canopy_solid(
 		ant_mount_thickness = ANT_MOUNT_THICKNESS,
 		ant_nut_dim = SMA_NUT_DIM,
+		ant_pos = ANT_POS,
 		cam_dim = CAM_DIM,
+		cam_pos = CAM_POS,
 		clamp_thickness_bot = FRAME_CLAMP_THICKNESS_BOT,
 		clamp_thickness_top = FRAME_CLAMP_THICKNESS_TOP,
 		clamp_width = FRAME_CLAMP_WIDTH,
@@ -122,7 +120,7 @@ module canopy_solid(
 			reflect(x = 0, y = 0, z = true) {
 
 				// lens front
-				translate([cam_dim[2] / 2 - rounding / 2, cam_dim[0] / 2 - rounding, cam_dim[1] / 2 - rounding])
+				translate([cam_dim[2] / 2 - rounding, cam_dim[0] / 2 - rounding, cam_dim[1] / 2 - rounding])
 				sphere(r);
 
 				// housing
@@ -130,17 +128,35 @@ module canopy_solid(
 				sphere(r);
 			}
 
+
 			// mount
-			translate([0, cam_dim[0] / 2 + clamp_width])
+			translate([0, cam_dim[0] / 2 + clamp_width * 2])
 			sphere(r);
 		}
 
-		// fc
-		translate(fc_pos)
-		reflect(y = 0)
-		translate([0, -rounding / 2])
-		translate(fc_dim / 2)
-		sphere(r);
+		translate(fc_pos) {
+
+			// ease angle at back (for printing)
+			translate([
+				ant_pos[0] + rounding * 2,
+				0,
+				fc_dim[2] / 2])
+			sphere(r);
+
+			// fc
+			reflect(y = 0)
+			translate([0, -rounding / 2])
+			translate(fc_dim / 2)
+			sphere(r);
+
+			// lens front at top (for printing)
+			translate([
+				cam_pos[0] - rounding,
+				cam_dim[0] / 2 - rounding,
+				fc_dim[2] / 2
+				])
+			sphere(r);
+		}
 
 		// frame (top)
 		translate([0, 0, FRAME_HEIGHT])
@@ -164,6 +180,7 @@ module canopy_solid(
 module canopy(
 		ant_nut_dim = SMA_NUT_DIM,
 		boom_dim = BOOM_DIM,
+		cam_cutout_r = CANOPY_CAM_CUTOUT_RAD,
 		cam_dim = CAM_DIM,
 		clamp_thickness_bot = FRAME_CLAMP_THICKNESS_BOT,
 		clamp_thickness_top = FRAME_CLAMP_THICKNESS_TOP,
@@ -175,7 +192,6 @@ module canopy(
 		thickness = CANOPY_THICKNESS,
 	) {
 
-	cam_cutout_r = cam_dim[0] * 0.4;
 	h_frame_bot = clamp_thickness_bot * 2;
 	h_frame_top = clamp_thickness_bot * 2 + (clamp_thickness_top - clamp_thickness_bot);
 
@@ -190,10 +206,10 @@ module canopy(
 		// camera cutout
 		pos_camera()
 		translate([
-			cam_dim[2] / 2 + rounding,
+			cam_dim[2] / 2 + rounding / 2,
 			0,
 			-cam_dim[1]  / 2])
-		capsule(h = cam_dim[1] * 2, r = cam_cutout_r);
+		capsule(h = cam_dim[1], r = cam_cutout_r);
 
 		// antenna cutout
 		hull()
@@ -202,9 +218,9 @@ module canopy(
 		rotate([0, 90])
 		cylinder(h = dim[0], r = ant_nut_dim[1] / 2 + TOLERANCE_CLEAR * 2, center = true);
 
-		// back cutout TODO: improve
+		// back cutout
 		translate([
-			-dim[0] - dim[0] / 2 + boom_dim[1], // manual
+			-dim[0] - dim[0] / 2 + boom_dim[1], // manual - TODO: improve
 			0, -h_frame_top])
 		cube([dim[0] * 2, dim[1] * 2, frame_height * 2], true);
 
@@ -221,11 +237,6 @@ module canopy(
 		}
 
 		// bottom cutout
-		*linear_extrude(h_frame_bot + TOLERANCE_CLEAR + thickness)
-		offset(r = -(thickness + TOLERANCE_CLEAR))
-		hull()
-		shape_frame_clamps();
-
 		linear_extrude(h_frame_bot * 2)
 		offset(r = -(thickness + TOLERANCE_CLEAR))
 		projection(cut = true)
@@ -247,14 +258,11 @@ module canopy(
 		translate([0, 0, frame_height - h_frame_top])
 		pos_canopy_clips_front()
 		hull() {
-			translate([-5, 2.5, clamp_thickness_bot])
-			cube([10, 10, 0.1], true);
+			translate([-5, 5, h_frame_top / 2])
+			cube([10, 15, h_frame_top], true);
 
-			translate([-10, 2.5, -frame_height])
-			cube([5, 10, 0.1], true);
+			translate([-10, 10, frame_height])
+			cube([10, 15, h_frame_top], true);
 		}
 	}
 }
-
-//canopy_solid();
-canopy();
