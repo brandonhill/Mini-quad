@@ -1,31 +1,39 @@
 
-include <_conf.scad>;
+include <_setup.scad>;
+
 use <antenna mount.scad>;
 use <canopy.scad>;
 use <camera mount.scad>;
-use <frame.scad>;
+include <frame.scad>;
 use <motor mount.scad>;
 
-echo(str("Booms = ", [BOOM_LENGTH, BOOM_HEIGHT, BOOM_THICKNESS]));
-echo(str("Struts = ", [STRUT_LENGTH, BOOM_HEIGHT, BOOM_THICKNESS]));
+// Caution! This renders threads on the FC mount posts, and takes a long time
+FINAL_RENDER = true;
 
-$fs = 0.5;
+$fs = FINAL_RENDER ? 0.5 : $fs;
 
-// !
+echo(str("$fa = ", $fa, ", $fn = ", $fn, "$fs = ", $fs));
+echo(str("Booms = ", BOOM_DIM));
+echo(str("Struts = ", STRUT_DIM));
+
+*
 rotate([0, 90])
 antenna_mount();
 
-// !
+*
 rotate([0, -90])
 camera_mount();
 
-!
+*
 // rotate([0, 180 + CANOPY_ANGLE_TOP]) // this is no good for the lip :(
 canopy();
 
-// !
+*
 frame();
 
-// !
+//*
+frame(top = true);
+
+*
 rotate([0, 180])
 motor_mount();
