@@ -50,5 +50,3 @@ module shape_camera_mount(
 		square([boom_dim[0], cam_dim[0] + TOLERANCE_FIT * 2], true);
 	}
 }
-
-shape_camera_mount();

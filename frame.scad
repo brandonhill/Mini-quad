@@ -135,37 +135,26 @@ module pos_frame_screws(
 module fc_mount_post(
 		col,
 		h_post = FC_MOUNT_HEIGHT,
-		nut_dim = FC_MOUNT_NUT_DIM,
+		screw_dim = FC_MOUNT_SCREW_DIM,
 		pitch = FC_MOUNT_THREAD_PITCH,
-		r = FC_HOLE_RAD,
 		thickness = FC_BOARD_THICKNESS,
 		tolerance = TOLERANCE_CLEAR,
 	) {
 
-	color(col != undef ? col : undef) {
-		cylinder(h = h_post, r = r * 2);
-
-		translate([0, 0, h_post]) {
-			if (false && FINAL_RENDER) {
-				metric_thread(diameter = r * 2, pitch = pitch, length = h_threads);
-			} else {
-				cylinder(h = thickness + nut_dim[2], r = r);
-			}
-
-			translate([0, 0, thickness])
-			% nut(nut_dim);
-		}
+	color(col != undef ? col : undef)
+	difference() {
+		cylinder(h = h_post, r = screw_dim[0]);
+		thread_iso_metric(screw_dim[0], h_post + 0.1, pitch, center = false, internal = true);
 	}
 
 	translate([0, 0, h_post + thickness])
-	% nut(nut_dim);
+	% screw(screw_dim, 5);
 }
 
 module pos_fc_holes(
 		hole_spacing = FC_HOLE_SPACING,
 	) {
-	reflect()
-	translate(hole_spacing / 2)
+	transpose(hole_spacing / 2)
 	children();
 }
 
@@ -396,6 +385,3 @@ module frame(
 	translate([0, 0, -20])
 	cube([dim[0], dim[1], 1], true);
 }
-
-*
-frame();
