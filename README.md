@@ -5,7 +5,7 @@ A parametrized mini quad frame with canopy made from 3D printed parts and straig
 Can be adjusted to a degree. There may be certain orientations that are manually configured, so changing the size and boom angle for example might require adjusting other variables.
 
 ![DIY 200 FPV mini quad](https://github.com/brandonhill/Mini-quad/blob/master/img/render.png)
-![DIY 200 FPV mini quad build](https://github.com/brandonhill/Mini-quad/blob/master/img/build.jpeg)
+![DIY 200 FPV mini quad build](https://github.com/brandonhill/Mini-quad/blob/master/img/build.jpg)
 
 ## Dependencies
 
