@@ -7,9 +7,9 @@ include <camera mount.scad>;
 include <frame.scad>;
 include <motor mount.scad>;
 
-FINAL_RENDER = true;
+//FINAL_RENDER = true;
 
-$fs = FINAL_RENDER ? 0.5 : $fs;
+$fs = 0.5;//FINAL_RENDER ? 0.5 : $fs;
 
 /* Last rendered using:
 TOLERANCE_CLOSE = 0.15;

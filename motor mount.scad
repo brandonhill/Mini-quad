@@ -1,134 +1,192 @@
 
-include <_conf.scad>;
-use <_setup.scad>;
+include <_setup.scad>;
 use <frame.scad>;
 
-module pos_motor_clamp_screws(
-		boom_angle = BOOM_ANGLE,
+module _X_motor_bumper(
 		boom_dim = BOOM_DIM,
-		front = false,
-		mount_rad = MOTOR_MOUNT_RAD,
-		screw_dim = FRAME_CLAMP_SCREW_DIM,
-		screw_surround = FRAME_CLAMP_SCREW_SURROUND,
-		show_inner = true,
-		show_outer = true,
-		outset = true, // false will position at boom-strut intersection
-		size = SIZE,
-		strut_pos = STRUT_POS,
+		clamp_depth = FRAME_CLAMP_DEPTH,
+		clamp_thickness = FRAME_CLAMP_THICKNESS,
+		frame_nut_dim = FRAME_CLAMP_NUT_DIM,
+		frame_screw_dim = FRAME_CLAMP_SCREW_DIM,
+		frame_screw_surround = FRAME_CLAMP_SCREW_SURROUND,
+		h = MOTOR_BUMPER_HEIGHT,
+		mount_outset = MOTOR_MOUNT_OUTSET,
+		mount_thickness = MOTOR_MOUNT_THICKNESS,
+		ret = MOTOR_BUMPER_RET_THICKNESS,
+		size = SIZE_DIA,
 	) {
 
-	// inner offset from motor center [x strut, y strut]
-	strut_screw_pos_inner = [
-		(size[0] / 2 - abs(strut_pos[0])) / cos(boom_angle) // motor centre to boom/strut intersection
-		+ (outset ?
-			((boom_dim[1] + screw_dim[0]) / 2 + TOLERANCE_FIT) / cos(boom_angle) + // to edge of strut
-			((boom_dim[1] + screw_dim[0]) / 2 + TOLERANCE_FIT) / tan(90 - boom_angle) // clear boom
-			:
-			0
-			),
-		(size[1] / 2 - abs(strut_pos[1])) / cos(90 - boom_angle)
-		+ (outset ?
-			((boom_dim[1] + screw_dim[0]) / 2 + TOLERANCE_FIT) / cos(90 - boom_angle) +
-			((boom_dim[1] + screw_dim[0]) / 2 + TOLERANCE_FIT) / tan(boom_angle)
-			:
-			0
-			)
-		];
-	strut_screw_pos_y = (boom_dim[1] + screw_dim[0]) / 2 + TOLERANCE_FIT;
+	a = 135;
+	r_inner = frame_screw_dim[1] / 2 + TOLERANCE_CLOSE + ret;
+	r_outer = frame_nut_dim[1] / 2 + frame_screw_surround + mount_outset;
 
-	pos_motor()
-	rotate([0, 0, boom_angle]) {
+	module shape() {
+		difference() {
+			smooth(1)
+			hull() {
+				translate([-ret - r_inner / 2, 0])
+				circle(r_inner);
 
-		// outer, at edge of motor mount
-		if (show_outer)
-		reflect(x = false)
-		translate([
-			mount_rad - screw_dim[0] / 2 - screw_surround,
-			strut_screw_pos_y])
-		children();
+				intersection() {
+					rotate([0, 0, 30])
+					circle_true(r_outer, $fn = 6);
 
-		// inner
-		if (show_inner) {
+					rotate([0, 0, -a / 2])
+					segment(a, r_outer * 2);
+				}
+			}
 
-			// back strut
-			if (!front)
-			translate([
-				-strut_screw_pos_inner[0],
-				-strut_screw_pos_y
-				])
-			children();
+			// boom
+			translate([-(boom_dim[0]) / 2 - frame_screw_dim[0] - ret - TOLERANCE_CLOSE, 0])
+			offset(r = TOLERANCE_CLOSE)
+			square([boom_dim[0], boom_dim[1]], true);
 
-			// side strut
-			translate([
-				-strut_screw_pos_inner[1],
-				strut_screw_pos_y
-				])
-			children();
+			// screw hole
+			circle(frame_screw_dim[0] / 2 + TOLERANCE_CLOSE);
+		}
+	}
+
+	pos_motor(i = -1)
+	difference() {
+		pos_motor()
+		pos_motor_bumper(z = false)
+		translate([0, 0, -frame_screw_dim[2]])
+		linear_extrude(h, convexity = 2)
+		shape();
+
+		// upper (mount) clearance
+		translate([0, 0, clamp_thickness + clamp_thickness + boom_dim[2]])
+		mirror([0, 0, 1])
+		linear_extrude(clamp_thickness + clamp_depth)
+		offset(r = TOLERANCE_CLOSE)
+		shape_motor_clamp();
+
+		// lower (clamp) clearance
+		translate([0, 0, 0])
+		linear_extrude(clamp_thickness + clamp_depth)
+		offset(r = TOLERANCE_CLOSE)
+		shape_motor_clamp();
+
+		scale([1, 1, -1])
+		linear_extrude(frame_screw_dim[2] * 2)
+		hull() {
+			circle(frame_screw_dim[1]);
+
+			pos_motor_clamp_screws(show_inner = false)
+			translate([-frame_screw_dim[1] / 2, 0])
+			circle(frame_screw_dim[1]);
 		}
 	}
 }
 
-module shape_motor_mount_frame_screw_surrounds(
-		front = false,
-		nut_dim = FRAME_CLAMP_NUT_DIM,
-		screw_dim = FRAME_CLAMP_SCREW_DIM,
-		screw_surround = FRAME_CLAMP_SCREW_SURROUND,
-		show_inner = true,
-		show_outer = true,
-		top = false,
+module motor_clamp(
+		depth = FRAME_CLAMP_DEPTH,
+		r_outer = false,
+		struts = [true, true], // [x, y]
+		thickness = FRAME_CLAMP_THICKNESS,
 	) {
 
-	r = top ?
-			nut_dim[1] / 2 + TOLERANCE_FIT + screw_surround :
-			screw_dim[0] / 2 + TOLERANCE_CLEAR + screw_surround
-			;
+	// base
+	linear_extrude(thickness, convexity = 2)
+	shape_motor_clamp(r_outer = r_outer, struts = struts);
 
-	// outer
-	if (show_outer)
-	intersection() {
-		shape_motor();
-
-		pos_motor_clamp_screws(front = front, show_inner = false, show_outer = show_outer)
-		circle(r);
+	// edges
+	translate([0, 0, thickness])
+	linear_extrude(depth, convexity = 2)
+	offset(delta = +0.5) offset(delta = -0.5) // remove tiny bits
+	difference() {
+		shape_motor_clamp(r_outer = r_outer, struts = struts);
+		diff_shape_booms(offset = TOLERANCE_CLOSE);
+		mirror([1, 0])
+		diff_shape_struts(offset = TOLERANCE_CLOSE, struts = struts);
 	}
-
-	// inner
-	if (show_inner)
-	pos_motor_clamp_screws(front = front, show_inner = show_inner, show_outer = false)
-	circle(r);
 }
 
-module shape_motor(
-		a = MOTOR_OUTSET_ANGLE,
+module motor_mount(
+		axle_clearance = MOTOR_CLEARANCE_DIM,
 		boom_angle = BOOM_ANGLE,
-		mount_rad = MOTOR_MOUNT_RAD,
+		boom_dim = BOOM_DIM,
+		clamp_depth = FRAME_CLAMP_DEPTH,
+		clamp_nut_dim = FRAME_CLAMP_NUT_DIM,
+		clamp_screw_dim = FRAME_CLAMP_SCREW_DIM,
+		frame_clamp_thickness = FRAME_CLAMP_THICKNESS,
+		frame_height = FRAME_HEIGHT,
+		motor_rad = MOTOR_MOUNT_RAD,
 		motor_screw_dim = MOTOR_SCREW_DIM,
-		outset = MOTOR_MOUNT_OUTSET,
-		screw_surround = FRAME_CLAMP_SCREW_SURROUND,
+		struts = [true, true],
+		surround = FRAME_CLAMP_SCREW_SURROUND,
+		thickness = MOTOR_MOUNT_THICKNESS,
 	) {
 
-	// mount area
-	hull()
-	pos_motor_screws()
-	circle(motor_screw_dim[1] / 2 + TOLERANCE_CLOSE + screw_surround);
+	difference() {
+		union () {
 
-	// protection
-	pos_motor()
-	rotate([0, 0, boom_angle - a / 2])
-	segment(a, mount_rad + outset);
-}
+			translate([0, 0, frame_height + clamp_nut_dim[2] - thickness])
+			linear_extrude(thickness, convexity = 10)
+			difference() {
+				smooth_acute(2) {
+					hull() {
 
-module shape_motor_boom_clamp(
-		boom_angle = BOOM_ANGLE,
-		clamp_width = FRAME_CLAMP_WIDTH,
-		top = false,
-	) {
+						// motor seat area
+						pos_motor()
+						intersection() {
+							circle(motor_rad);
 
-	intersection() {
-		union() {
-			shape_motor();
-			hull()
-			shape_motor_mount_frame_screw_surrounds(top = top);
+							hull()
+							rotate([0, 0, boom_angle])
+							for (x = [-1, 1])
+							translate([10 * x, 0])
+							rotate([0, 0, -boom_angle])
+							pos_motor_screws()
+							circle(motor_screw_dim[1] / 2 + TOLERANCE_CLOSE + 2);
+						}
+
+						// inner boom/strut joint
+						pos_motor_clamp_screws(show_outer = false, struts = struts)
+						circle(surround);
+					}
+
+					// clamp area
+					shape_motor_clamp(r_outer = clamp_nut_dim[1] / 2, struts = struts);
+				}
+
+				// clamp screw holes
+				pos_motor_clamp_screws(struts = struts)
+				circle(clamp_screw_dim[0] / 2 + TOLERANCE_CLEAR);
+			}
+
+			// clamp
+			translate([0, 0, frame_height + clamp_nut_dim[2]])
+			mirror([0, 0, 1])
+			motor_clamp(r_outer = clamp_nut_dim[1] / 2, struts = struts, thickness = frame_clamp_thickness + clamp_nut_dim[2]);
+		}
+
+		// nut recesses
+		pos_motor_clamp_screws(struts = struts)
+		translate([0, 0, clamp_nut_dim[2] * 1/3]) // partial outset to accommodate crushing of conical seat
+		mirror([0, 0, 1])
+		nut_diff(clamp_nut_dim, conical = true, mock = false, tolerance = TOLERANCE_CLOSE);
+
+		// motor holes
+		pos_motor() {
+
+			// axle clearance
+			mirror([0, 0, 1]) {
+				translate([0, 0, -0.1])
+				cylinder(h = axle_clearance[1] * 0.5 + 0.1, r = axle_clearance[0] / 2);
+				translate([0, 0, axle_clearance[1] * 0.5])
+				cylinder(h = axle_clearance[1] * 0.5 + 0.1, r1 = axle_clearance[0] / 2, r2 = axle_clearance[0] * 0.2);
+			}
+
+			// screw head clearance
+			pos_motor_screws()
+			translate([0, 0, -thickness])
+			mirror([0, 0, 1])
+			cylinder(h = thickness * 3, r = motor_screw_dim[1] / 2 + TOLERANCE_CLOSE);
+
+			// screw holes
+			pos_motor_screws()
+			cylinder(h = thickness * 3, r = motor_screw_dim[0] / 2 + TOLERANCE_CLOSE, center = true);
 		}
 
 		offset(delta = clamp_width + TOLERANCE_FIT)
@@ -136,10 +194,268 @@ module shape_motor_boom_clamp(
 	}
 }
 
+module motor_soft_mount(
+		boom_angle = BOOM_ANGLE,
+		clamp_depth = FRAME_CLAMP_DEPTH,
+		clearance_dim = MOTOR_CLEARANCE_DIM,
+		mount_outset = MOTOR_MOUNT_OUTSET,
+		mount_rad = MOTOR_MOUNT_RAD,
+		motor_screw_dim = MOTOR_SCREW_DIM,
+		mount_thickness = MOTOR_MOUNT_THICKNESS,
+		thickness = MOTOR_SOFT_MOUNT_THICKNESS,
+	) {
+
+	a = 135;
+
+	module shape() {
+		difference() {
+			smooth_acute(2) {
+				// motor mount area
+				circle(mount_rad / 2);
+				shape_motor_screw_area();
+
+				// outset area
+				*rotate([0, 0, boom_angle - a / 2])
+				segment(a, mount_rad + mount_outset);
+			}
+		} else {
+			shape_motor_boom_clamp(top = top);
+			shape_motor_strut_clamp(front = front);
+		}
+
+			// axle clearance_dim
+			circle(clearance_dim[0] / 2 + TOLERANCE_CLEAR);
+
+			// screw holes
+			pos_motor_screws()
+			circle(motor_screw_dim[0] / 2 + TOLERANCE_CLEAR);
+		}
+
+	}
+
+	linear_extrude(thickness)
+	shape();
+
+	*linear_extrude(thickness + mount_thickness)
+	difference() {
+		shape();
+
+		pos_motor(-1)
+		offset(r = TOLERANCE_CLOSE)
+		shape_motor();
+	}
+}
+
+module pos_motor_bumper(
+		boom_angle = BOOM_ANGLE,
+		clamp_thickness = FRAME_CLAMP_THICKNESS,
+		h = MOTOR_BUMPER_HEIGHT,
+		mount_rad = MOTOR_MOUNT_RAD,
+		mount_thickness = MOTOR_MOUNT_THICKNESS,
+		nut_dim = FRAME_CLAMP_NUT_DIM,
+		screw_surround = FRAME_CLAMP_SCREW_SURROUND,
+		i = 1,
+		z = true,
+	) {
+	rotate([0, 0, boom_angle])
+	translate([
+		mount_rad - screw_surround - nut_dim[1] / 2,
+		0,
+		//z ? -clamp_thickness - h - (mount_thickness - clamp_thickness) : 0
+		] * i)
+	scale([1, 1, z ? -1 : 1])
+	children();
+}
+
+module pos_motor_clamp_screws(
+		boom_angle = BOOM_ANGLE,
+		boom_dim = BOOM_DIM,
+		mount_rad = MOTOR_MOUNT_RAD,
+		nut_dim = FRAME_CLAMP_NUT_DIM,
+		screw_dim = FRAME_CLAMP_SCREW_DIM,
+		screw_surround = FRAME_CLAMP_SCREW_SURROUND,
+		show_inner = true,
+		show_outer = true,
+		outset = true, // false will position at boom-strut intersection
+		size = SIZE,
+		strut_dim = STRUT_DIM,
+		strut_pos = STRUT_POS,
+		struts = [true, true],
+		z = true,
+	) {
+
+	// inner offset from motor center [x strut, y strut]
+	strut_screw_pos_inner = [
+		(size[0] / 2 - abs(strut_pos[0])) / cos(boom_angle) // motor centre to boom/strut intersection
+		+ (outset ?
+			((strut_dim[1] + screw_dim[0]) / 2 + TOLERANCE_CLOSE) / cos(boom_angle) + // to edge of strut
+			((boom_dim[1] + screw_dim[0]) / 2 + TOLERANCE_CLOSE) / tan(90 - boom_angle) // clear boom
+			:
+			0
+			),
+		(size[1] / 2 - abs(strut_pos[1])) / cos(90 - boom_angle)
+		+ (outset ?
+			((strut_dim[1] + screw_dim[0]) / 2 + TOLERANCE_CLOSE) / cos(90 - boom_angle) +
+			((boom_dim[1] + screw_dim[0]) / 2 + TOLERANCE_CLOSE) / tan(boom_angle)
+			:
+			0
+			)
+		];
+	boom_screw_pos_y = (boom_dim[1] + screw_dim[0]) / 2 + TOLERANCE_CLOSE;
+	//strut_screw_pos_y = (strut_dim[1] + screw_dim[0]) / 2 + TOLERANCE_CLOSE;
+
+	pos_motor(z = z)
+	rotate([0, 0, boom_angle]) {
+
+		// outer, at edge of motor mount
+		if (show_outer)
+		reflect(x = false, y = !MOTOR_CLAMP_SCREW_SINGLE_OUTER)
+		translate([
+			//mount_rad - screw_surround - nut_dim[1] / 2,
+			mount_rad - screw_surround / 2 - nut_dim[1] / 2,
+			MOTOR_CLAMP_SCREW_SINGLE_OUTER ? 0 : boom_screw_pos_y
+			])
+		children();
+
+		// inner
+		if (show_inner) {
+
+			// back strut
+			if (struts[1])
+			translate([
+				-strut_screw_pos_inner[0],
+				-boom_screw_pos_y
+				])
+			children();
+
+			// side strut
+			translate([
+				-strut_screw_pos_inner[1],
+				boom_screw_pos_y
+				])
+			children();
+		}
+	}
+}
+
+module shape_motor(
+		a = MOTOR_OUTSET_ANGLE,
+		boom_angle = BOOM_ANGLE,
+		mount_rad = MOTOR_MOUNT_RAD,
+		nut_dim = FRAME_CLAMP_NUT_DIM,
+		outset = MOTOR_MOUNT_OUTSET,
+		screw_surround = FRAME_CLAMP_SCREW_SURROUND,
+	) {
+
+	// mount area
+	intersection() {
+		pos_motor()
+		circle(mount_rad);
+
+		hull()
+		for (x = [0, mount_rad])
+		rotate([0, 0, boom_angle])
+		translate([x, 0])
+		rotate([0, 0, -boom_angle])
+		pos_motor()
+		shape_motor_screw_area();
+	}
+
+	// nut surrounds
+	hull()
+	pos_motor_clamp_screws(show_inner = false, show_outer = true)
+	circle(nut_dim[1] / 2 + TOLERANCE_CLOSE + screw_surround);
+
+	// protection
+	if (outset > 0)
+	*pos_motor()
+	rotate([0, 0, boom_angle - a / 2])
+	segment(a, mount_rad + outset);
+}
+
+module shape_motor_boom_clamp(
+		boom_angle = BOOM_ANGLE,
+		boom_dim = BOOM_DIM,
+		boom_strut_joint = BOOM_STRUT_JOINT,
+		clamp_length = FRAME_CLAMP_LENGTH,
+		clamp_width = FRAME_CLAMP_WIDTH,
+		nut_dim = FRAME_CLAMP_NUT_DIM,
+		screw_dim = FRAME_CLAMP_SCREW_DIM,
+		size = SIZE_DIA,
+		struts = [true, true],
+		surround = FRAME_CLAMP_SCREW_SURROUND,
+	) {
+
+	intersection() {
+		rotate([0, 0, boom_angle])
+		//translate([size / 2 + boom_strut_joint + boom_dim[1] - clamp_length, 0])
+		translate([size / 4 + boom_strut_joint + boom_dim[1] - surround * 2 - screw_dim[0] - TOLERANCE_CLOSE * 2, 0])
+		square(size / 2, true);
+
+		offset(delta = TOLERANCE_CLOSE + clamp_width)
+		shape_booms();
+	}
+}
+
+module shape_motor_clamp(
+		clamp_screw_dim = FRAME_CLAMP_SCREW_DIM,
+		r_outer = false,
+		struts = [true, true],
+	) {
+
+	difference() {
+		smooth_acute(2) {
+			shape_motor_boom_clamp(struts = struts);
+			shape_motor_mount_frame_screw_surrounds(r_outer = r_outer != false ? r_outer : clamp_screw_dim[1] / 2, struts = struts);
+			shape_motor_strut_clamp(struts = struts);
+		}
+
+		pos_motor_clamp_screws(struts = struts)
+		circle(clamp_screw_dim[0] / 2 + TOLERANCE_CLEAR);
+	}
+}
+
+module shape_motor_mount_frame_screw_surrounds(
+		r_outer,
+		screw_surround = FRAME_CLAMP_SCREW_SURROUND,
+		show_inner = true,
+		show_outer = true,
+		struts = [true, true],
+	) {
+
+	r = r_outer + TOLERANCE_CLOSE + screw_surround;
+
+	// outer
+	if (show_outer)
+	intersection()
+	{
+		shape_motor();
+
+		hull()
+		pos_motor_clamp_screws(show_inner = false, show_outer = true, struts = struts)
+		circle(r);
+	}
+
+	// inner
+	if (show_inner)
+	hull()
+	pos_motor_clamp_screws(show_inner = true, show_outer = false, struts = struts)
+	circle(r);
+}
+
+module shape_motor_screw_area(
+		motor_screw_dim = MOTOR_SCREW_DIM,
+	) {
+
+	pos_motor_screws()
+	circle(motor_screw_dim[1] / 2 + TOLERANCE_CLOSE + 2);
+}
+
 module shape_motor_strut_clamp(
 		boom_angle = BOOM_ANGLE,
+		clamp_length = FRAME_CLAMP_LENGTH,
 		clamp_width = FRAME_CLAMP_WIDTH,
-		front = false,
+		struts = [true, true],
 	) {
 
 	intersection() {
@@ -148,126 +464,11 @@ module shape_motor_strut_clamp(
 
 			pos_motor_clamp_screws(outset = false, show_outer = false)
 			rotate([0, 0, -boom_angle])
-			square(20, true); // arbitrary! TODO: restore CLAMP_LENGTH param
+			square(clamp_length * 2, true); // arbitrary! TODO: restore CLAMP_LENGTH param
 		}
 
-		offset(delta = clamp_width + TOLERANCE_FIT)
-		shape_struts(all = !front);
-	}
-}
-
-module shape_clamps(
-		front = false,
-	) {
-	shape_motor_boom_clamp();
-	shape_motor_strut_clamp(front = front);
-}
-
-module shape_motor_mount(
-		boom_angle = BOOM_ANGLE,
-		clamp_width = FRAME_CLAMP_WIDTH,
-		front = false,
-		motor_screw_dim = MOTOR_SCREW_DIM,
-		mount_rad = MOTOR_MOUNT_RAD,
-		clamp_screw_dim = FRAME_CLAMP_SCREW_DIM,
-		screw_surround = FRAME_CLAMP_SCREW_SURROUND,
-		top = true,
-	) {
-
-	union() {
-		if (top) {
-			hull() {
-				shape_motor();
-				offset(r = -clamp_width * 2)
-				shape_clamps(front = front);
-			}
-		} else {
-			shape_motor_boom_clamp(top = top);
-			shape_motor_strut_clamp(front = front);
-		}
-
-		hull()
-		shape_motor_mount_frame_screw_surrounds(front = front, show_outer = false, top = top);
-
-		hull()
-		shape_motor_mount_frame_screw_surrounds(front = front, show_inner = false, top = top);
-	}
-}
-
-module motor_mount(
-		boom_angle = BOOM_ANGLE,
-		boom_thickness = BOOM_THICKNESS,
-//		clamp_length = FRAME_CLAMP_LENGTH,
-		clamp_thickness_bot = FRAME_CLAMP_THICKNESS_BOT,
-		clamp_thickness_top = FRAME_CLAMP_THICKNESS_TOP,
-		clearance_dim = MOTOR_CLEARANCE_DIM,
-		col,
-		front = false,
-		height = BOOM_HEIGHT,
-		landing_gear_height = LG_HEIGHT,
-		mount_outset = MOTOR_MOUNT_OUTSET,
-		mount_rad = MOTOR_MOUNT_RAD,
-		motor_screw_dim = MOTOR_SCREW_DIM,
-		min_thickness = 0,
-		mount_thickness = MOTOR_MOUNT_THICKNESS,
-		nut_dim = FRAME_CLAMP_NUT_DIM,
-		clamp_screw_dim = FRAME_CLAMP_SCREW_DIM,
-		clamp_screw_length = FRAME_CLAMP_SCREW_LENGTH,
-		screw_surround = FRAME_CLAMP_SCREW_SURROUND,
-		top = true,
-	) {
-
-	clamp_thickness = top ? clamp_thickness_top : clamp_thickness_bot;
-
-	difference() {
-		color(col != undef ? col : undef)
-		union() {
-
-			// motor mount
-			if (top)
-			linear_extrude(mount_thickness, convexity = 2)
-			smooth_acute(4) {
-				shape_motor_mount(front = front);
-				shape_motor_mount(front = front, top = false);
-			}
-
-			// frame clamp
-			linear_extrude(clamp_thickness_bot * 2 + (clamp_thickness - clamp_thickness_bot), convexity = 2)
-			smooth_acute(1)
-			shape_motor_mount(front = front, top = false);
-		}
-
-		// boom/strut channels
-		translate([0, 0, clamp_thickness])
-		diff_frame_stock(all = !front, offset = TOLERANCE_FIT);
-
-		// clamp nut/screw holes
-		pos_motor_clamp_screws(front = front) {
-			scale([1, 1, -1])
-			screw_diff(dim = clamp_screw_dim, h = clamp_screw_length, mock = !top, tolerance = TOLERANCE_CLOSE);
-
-			if (top)
-			nut_diff(nut_dim, mock = true, tolerance = TOLERANCE_FIT);
-		}
-
-		// motor
-		if (top) {
-			// shaft clearance
-//			#
-			translate([0, 0, -0.1])
-			pos_motor()
-			cylinder(h = clearance_dim[1], r = clearance_dim[0] / 2);
-
-			// screw holes
-			linear_extrude((top ? mount_thickness : clamp_thickness) * 5, center = true, convexity = 2)
-			pos_motor_screws()
-			circle(motor_screw_dim[0] / 2 + TOLERANCE_CLOSE);
-
-			// screw head clearance
-			translate([0, 0, mount_thickness])
-			linear_extrude(clamp_thickness * 3)
-			pos_motor_screws()
-			circle(motor_screw_dim[1] / 2 + TOLERANCE_CLOSE);
-		}
+		offset(delta = clamp_width + TOLERANCE_CLOSE)
+		mirror([1, 0])
+		shape_struts(struts = struts);
 	}
 }

@@ -7,33 +7,42 @@ use <camera mount.scad>;
 include <frame.scad>;
 use <motor mount.scad>;
 
-// Caution! This renders threads on the FC mount posts, and takes a long time
-FINAL_RENDER = true;
+$fs = 0.5;
 
-$fs = FINAL_RENDER ? 0.5 : $fs;
-
-echo(str("$fa = ", $fa, ", $fn = ", $fn, "$fs = ", $fs));
+echo(str("$fa = ", $fa, ", $fn = ", $fn, ", $fs = ", $fs));
 echo(str("Booms = ", BOOM_DIM));
 echo(str("Struts = ", STRUT_DIM));
 
-*
-rotate([0, 90])
-antenna_mount();
-
-*
-rotate([0, -90])
-camera_mount();
-
-*
-// rotate([0, 180 + CANOPY_ANGLE_TOP]) // this is no good for the lip :(
+*rotate([180, 0])
 canopy();
 
-*
-frame();
+frame_bot();
 
-//*
-frame(top = true);
+*translate([0, 0, -FRAME_HEIGHT + FRAME_CLAMP_DEPTH + FRAME_CLAMP_THICKNESS])
+frame_top();
 
-*
-rotate([0, 180])
+// front motor clamp (left/right)
+*mirror([0, 1]) // for right
+rotate([0, 0, 180 - BOOM_ANGLE])
+pos_motor(i = -1, z = false)
+motor_clamp(struts = [true, false]);
+
+// rear motor clamp (x2)
+*rotate([0, 0, 180 - BOOM_ANGLE])
+pos_motor(i = -1, z = false)
+motor_clamp();
+
+// front motor mount (left/right)
+*mirror([0, 1]) // for left
+rotate([0, 0, -BOOM_ANGLE])
+translate([0, 0, FRAME_HEIGHT + FRAME_CLAMP_NUT_DIM[2]])
+mirror([0, 0, 1])
+pos_motor(i = -1, z = false)
+motor_mount(struts = [true, false]);
+
+// rear motor mount (x2)
+*rotate([0, 0, 180 - BOOM_ANGLE])
+translate([0, 0, FRAME_HEIGHT + FRAME_CLAMP_NUT_DIM[2]])
+mirror([0, 0, 1])
+pos_motor(i = -1, z = false)
 motor_mount();

@@ -1,50 +1,67 @@
 
 include <_conf.scad>;
 
-module _X_diff_frame_ant_wire_hole(
-		ant_wire_hole_rad = ANT_WIRE_HOLE_RAD,
-		//frame_dim = FRAME_DIM,
-		l = max(ANT_MOUNT_THICKNESS, FRAME_WALL_THICKNESS) * 2 + 1,
-		plate_thickness = FRAME_PLATE_THICKNESS,
-		wall_thickness = FRAME_WALL_THICKNESS,
+module diff_booms(
+		dim = BOOM_DIM,
+		offset = 0,
+		z = true,
 	) {
-
-	translate([POS_FRAME_ACC_BACK[0] + ANT_MOUNT_THICKNESS / 2, 0, plate_thickness + ant_wire_hole_rad])
-	rotate([0, 90])
-	cylinder(h = l, r = ant_wire_hole_rad, center = true);
+	pos_booms(z = z)
+	diff_stock(dim = dim, center = false, offset = offset);
 }
 
-module diff_stock(
-		l,
+module diff_shape_booms(
 		dim = BOOM_DIM,
+		offset = 0,
+	) {
+	pos_booms(offset = BOOM_LENGTH_NAT - BOOM_LENGTH)
+	diff_shape_stock(l = dim[0], dim = dim, center = false, offset = offset);
+}
+
+module diff_shape_stock(
+		l,
+		dim,
 		center = true,
 		offset = 0,
 	) {
-	translate([center ? 0 : l / 2, 0, dim[2] / 2])
-	cube([l + offset * 2, dim[1] + offset * 2, dim[2] + offset * 2], true);
+	translate([center ? 0 : l / 2, 0])
+	square([l + offset * 2, dim[1] + offset * 2], true);
 }
 
-module diff_booms(
-		dim = BOOM_DIM,
-		clamp_width = FRAME_CLAMP_WIDTH,
+module diff_stock(
+		dim,
+		center = true,
 		offset = 0,
 	) {
-	pos_booms(offset = clamp_width + TOLERANCE_FIT + (BOOM_LENGTH_NAT - BOOM_LENGTH))
-	diff_stock(l = dim[0], center = false, offset = offset);
+	translate([center ? 0 : dim[0] / 2, 0, dim[2] / 2])
+	cube([
+		dim[0] + offset * 2,
+		dim[1] + offset * 2,
+		dim[2] + offset * 2], true);
+}
+
+module diff_shape_struts(
+		dim = STRUT_DIM,
+		offset = 0,
+		struts = [true, true],
+	) {
+	pos_struts(struts = struts)
+	diff_shape_stock(l = dim[0], dim = dim, offset = offset);
 }
 
 module diff_struts(
-		all = true,
 		dim = STRUT_DIM,
 		offset = 0,
+		struts = [true, true],
+		z = true,
 	) {
-	pos_struts(all = all)
-	diff_stock(l = dim[0], offset = offset);
+	pos_struts(struts = struts, z = z)
+	diff_stock(dim = dim, offset = offset);
 }
 
-module diff_frame_stock(all = true) {
+module diff_frame_stock(struts = [true, true]) {
 	diff_booms();
-	diff_struts(all = all);
+	diff_struts(struts = struts);
 }
 
 module pos_ant(
@@ -58,14 +75,25 @@ module pos_ant(
 }
 
 module pos_booms(
-		motor_angle = BOOM_ANGLE,
-		offset = 0,
+		boom_angle = BOOM_ANGLE,
+		outset = BOOM_OUTSET,
 		reflect = [true, true], // [x, y]
+		z = true,
 	) {
 
 	reflect(x = reflect[0] ? [-1, 1] : false, y = reflect[1] ? [-1, 1] : false)
-	rotate([0, 0, motor_angle])
-	translate([offset, 0])
+	rotate([0, 0, boom_angle])
+	translate([outset, 0, z ? FRAME_CLAMP_THICKNESS : 0])
+	children();
+}
+
+module pos_buzzer(
+		pos = BUZZER_POS,
+		rot = BUZZER_ROT,
+		z = true,
+	) {
+	translate([pos[0], pos[1], z ? pos[2] : 0])
+	rotate(rot)
 	children();
 }
 
@@ -79,26 +107,25 @@ module pos_camera(
 	children();
 }
 
-module pos_landing_gear(
-		clamp_thickness = FRAME_CLAMP_THICKNESS_BOT,
-		h = LG_HEIGHT,
-		strut_dim = STRUT_DIM,
-		width = LG_WIDTH,
+module pos_frame_nuts(
+		boom_dim = BOOM_DIM,
+		clamp_thickness = FRAME_CLAMP_THICKNESS,
 	) {
-	pos_struts(show = [false, true])
-	translate([strut_dim[0] / 2 - 10 - width / 2, 0, clamp_thickness + strut_dim[2] / 2 + h])
-	rotate([90, 0, 90])
+	pos_frame_screws()
+	translate([0, 0, boom_dim[2] + clamp_thickness * 2])
 	children();
 }
 
-module pos_motor(i = 1) {
-	translate(SIZE / 2 * i)
-	children();
-}
-
-module pos_motor_screws(
+module pos_frame_screws(
 		boom_angle = BOOM_ANGLE,
-		mount_screw_spacing = MOTOR_SCREW_SPACING,
+		boom_dim = BOOM_DIM,
+		clamp_thickness = FRAME_CLAMP_THICKNESS,
+		dim = FRAME_DIM,
+		hull = false,
+		//nut_dim = FRAME_CLAMP_NUT_DIM,
+		screw_dim = FRAME_CLAMP_SCREW_DIM,
+		//screw_surround = FRAME_CLAMP_SCREW_SURROUND,
+		reflect = [true, true], // [x, y]
 	) {
 	pos_motor()
 	for (i = [0 : 3])
@@ -111,32 +138,115 @@ module pos_motor_screws(
 	}
 }
 
-module pos_motors() {
+	//nut_rad = nut_dim[0] / 2 / cos(60);
+
+	module pair() {
+		translate([
+			min(dim[0], dim[1]) / 2 / sin(boom_angle) // place at frame corner
+			//- (nut_rad + TOLERANCE_CLOSE + screw_surround) / sin(boom_angle)
+			//- nut_rad + TOLERANCE_CLOSE * sin(boom_angle)
+			,
+			-((boom_dim[1] + screw_dim[0]) / 2 + TOLERANCE_CLOSE)
+			])
+		children();
+	}
+
+	translate([0, 0, -clamp_thickness])
+	pos_booms(reflect = reflect, outset = 0) {
+		if (hull) {
+			hull()
+			pair()
+			children();
+		} else {
+			pair()
+			children();
+		}
+	}
+}
+
+module pos_landing_gear(
+		boom_dim = BOOM_DIM,
+		clamp_thickness = FRAME_CLAMP_THICKNESS,
+		h = LG_HEIGHT,
+		motor_rad = MOTOR_MOUNT_RAD,
+		width = LG_WIDTH,
+	) {
+	pos_booms(reflect = [false, true])
+	translate([boom_dim[0] - 15, 0, clamp_thickness + boom_dim[2] / 2 + h])
+	rotate([90, 0, 90])
+	children();
+}
+
+module pos_motor(i = 1, z = true) {
+	//translate([0, 0, z ? FRAME_HEIGHT + FRAME_CLAMP_NUT_DIM[2] + MOTOR_SOFT_MOUNT_THICKNESS : 0])
+	translate([0, 0, z ? FRAME_HEIGHT + FRAME_CLAMP_NUT_DIM[2] : 0])
+	translate(SIZE / 2 * i)
+	children();
+}
+
+module pos_motor_mounts_front_top() {
+	reflect(x = false)
+	translate([0, 0, BOOM_DIM[2] + FRAME_CLAMP_THICKNESS + FRAME_CLAMP_THICKNESS])
+	scale([1, 1, -1])
+	children();
+}
+
+module pos_motor_screws(
+		boom_angle = BOOM_ANGLE,
+		mount_screw_spacing = MOTOR_SCREW_SPACING,
+	) {
+	for (i = [0 : 3])
+	rotate([0, 0, 45 + boom_angle + 90 * i])
+	hull() {
+		translate([mount_screw_spacing[0] / 2, 0])
+		children();
+		translate([mount_screw_spacing[1] / 2, 0])
+		children();
+	}
+}
+
+module pos_motors(z = true) {
 	reflect()
-	pos_motor()
+	pos_motor(z = z)
+	children();
+}
+
+module pos_rx(
+		pos = RX_POS,
+		rot = RX_ROT,
+		z = true,
+	) {
+	translate([pos[0], pos[1], z ? pos[2] : 0])
+	rotate(rot)
 	children();
 }
 
 module pos_struts(
-		all = false,
 		dim = STRUT_DIM,
 		motor_mount_rad = MOTOR_MOUNT_RAD,
 		pos = STRUT_POS,
-		show = [true, true],
+		struts = [true, true],
+		reflect = [true, false],
+		z = true,
 	) {
 
-	// x (back)
-	if (show[0])
-	reflect(y = false, x = (all ? [-1, 1] : false))
-	translate([pos[0], 0])
-	rotate([0, 0, 90])
-	children();
+	//warn(["pos_struts", struts]);
 
-	// y (sides)
-	if (show[1])
-	reflect(x = false)
-	translate([0, pos[1]])
-	children();
+	translate([0, 0, z ? FRAME_CLAMP_THICKNESS : 0]) {
+
+		// x (sides)
+		if (struts[0])
+		reflect(x = false, y = reflect[0] ? [1, -1] : false)
+		translate([0, pos[1]])
+		children();
+
+		// y (back)
+		if (struts[1])
+		reflect(x = reflect[1] ? [1, -1] : false, y = false)
+		translate([pos[0], 0])
+		rotate([0, 0, 90])
+		children();
+	}
 }
 
 module shape_booms(
@@ -144,7 +254,8 @@ module shape_booms(
 		clamp_width = FRAME_CLAMP_WIDTH,
 		offset = 0,
 	) {
-	pos_booms(offset = clamp_width + TOLERANCE_FIT + (BOOM_LENGTH_NAT - BOOM_LENGTH))
+//	pos_booms(offset = clamp_width + TOLERANCE_CLOSE + (BOOM_LENGTH_NAT - BOOM_LENGTH))
+	pos_booms()
 	translate([dim[0] / 2, 0])
 	square([dim[0] + offset * 2, dim[1] + offset * 2], true);
 }
@@ -155,10 +266,10 @@ module shape_frame_stock() {
 }
 
 module shape_struts(
-		all = true,
 		dim = STRUT_DIM,
 		offset = 0,
+		struts = [true, true],
 	) {
-	pos_struts(all = all)
+	pos_struts(struts = struts)
 	square([dim[0] + offset * 2, dim[1] + offset * 2], true);
 }
