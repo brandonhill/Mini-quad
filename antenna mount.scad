@@ -45,6 +45,7 @@ module shape_ant_mount(
 				translate([-r, w / 2])
 				circle(r);
 			}
+		}
 
 		// battery wire zip tie hole
 		*pos_frame_screws(reflect = [false, false], show = [true, false])

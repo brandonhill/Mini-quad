@@ -122,32 +122,15 @@ module pos_frame_screws(
 		clamp_thickness = FRAME_CLAMP_THICKNESS,
 		dim = FRAME_DIM,
 		hull = false,
-		//nut_dim = FRAME_CLAMP_NUT_DIM,
 		screw_dim = FRAME_CLAMP_SCREW_DIM,
-		//screw_surround = FRAME_CLAMP_SCREW_SURROUND,
 		reflect = [true, true], // [x, y]
 	) {
-	pos_motor()
-	for (i = [0 : 3])
-	rotate([0, 0, 45 + boom_angle + 90 * i])
-	hull() {
-		translate([mount_screw_spacing[0] / 2, 0])
-		children();
-		translate([mount_screw_spacing[1] / 2, 0])
-		children();
-	}
-}
-
-	//nut_rad = nut_dim[0] / 2 / cos(60);
 
 	module pair() {
 		translate([
-			min(dim[0], dim[1]) / 2 / sin(boom_angle) // place at frame corner
-			//- (nut_rad + TOLERANCE_CLOSE + screw_surround) / sin(boom_angle)
-			//- nut_rad + TOLERANCE_CLOSE * sin(boom_angle)
-			,
+			min(dim[0], dim[1]) / 2 / sin(boom_angle), // place at frame corner
 			-((boom_dim[1] + screw_dim[0]) / 2 + TOLERANCE_CLOSE)
-			])
+		])
 		children();
 	}
 

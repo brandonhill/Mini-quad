@@ -334,9 +334,6 @@ module frame_top(
 		linear_extrude(20, center = true, convexity = 2)
 		shape_vtx_mount(diff = true);
 	}
-
-	translate([0, 0, h_post + thickness])
-	% screw(screw_dim, 5);
 }
 
 module pos_rx_ant_mount_holes(
