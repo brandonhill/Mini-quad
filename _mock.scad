@@ -3,7 +3,7 @@ include <_setup.scad>;
 
 MOCK_CAM_ANGLE = CAM_ANGLE; // test movement
 MOCK_COMPONENTS = true;
-MOCK_HARDWARE = false;
+MOCK_HARDWARE = true;
 
 PRINT_COL_ALL = "lime";//alpha(COLOUR_BLUE_DARK, 0.5);
 
@@ -38,7 +38,7 @@ print(["Struts = ", STRUT_DIM, ", natural = ", STRUT_LENGTH_NAT]);
 *pos_landing_gear()
 landing_gear();
 
-*mock_battery();
+mock_battery();
 
 translate([0, 0, LG_HEIGHT]) {
 
@@ -54,13 +54,14 @@ translate([0, 0, LG_HEIGHT]) {
 	translate([0, 0, 12])
 	5g_cp_antenna(30, wire_awg = ANT_WIRE_AWG);
 
+	mock_battery_strap();
+
 	mock_buzzer();
 
 	mock_camera();
 
 	color(PRINT_COLOUR_CANOPY)
-	//show_half()
-	//show_half(r = [0, 0, 90])
+	show_half()
 	canopy();
 
 	mock_escs();
@@ -73,11 +74,18 @@ translate([0, 0, LG_HEIGHT]) {
 	color(PRINT_FRAME_COLOUR_TOP)
 	frame_top();
 
-	mock_battery_strap();
+	if (MOCK_HARDWARE) {
+		mock_booms();
 
-	mock_booms();
+		pos_frame_nuts()
+		%nut(FRAME_CLAMP_NUT_DIM);
 
-	mock_struts();
+		pos_frame_screws()
+		mirror([0, 0, -1])
+		%screw(FRAME_CLAMP_SCREW_DIM, FRAME_CLAMP_SCREW_LENGTH);
+
+		mock_struts();
+	}
 
 	// motor mounts
 	reflect(x = false, y = true) {
@@ -118,7 +126,7 @@ translate([0, 0, LG_HEIGHT]) {
 	mock_rx();
 
 	pos_rx_ant_mount_holes()
-	mock_rx_ant(pos = [0, 0, 0], rot = [-120, 0, 0]);
+	mock_rx_ant(pos = [0, 0, 0], rot = [-100, 0, 0]);
 
 	mock_vtx();
 
@@ -129,13 +137,16 @@ translate([0, 0, LG_HEIGHT]) {
 		if (MOCK_COMPONENTS)
 		% motor_soft_mount();
 
-		translate([0, 0, MOTOR_SOFT_MOUNT_THICKNESS]) {
+		translate([0, 0, MOTOR_SOFT_MOUNT_THICKNESS])
+		mock_motor();
 
-			mock_motor();
+		translate([0, 0, MOTOR_SOFT_MOUNT_THICKNESS + MOTOR_HEIGHT + 5])
+		mock_prop();
 
-			translate([0, 0, MOTOR_HEIGHT + 5])
-			mock_prop();
-		}
+		pos_motor_screws(hull = false)
+		translate([0, 0, -MOTOR_MOUNT_THICKNESS])
+		mirror([0, 0, -1])
+		%screw(MOTOR_SCREW_DIM, MOTOR_SCREW_LENGTH);
 	}
 }
 
@@ -149,14 +160,13 @@ module mock_ant_conn(pos = ANT_POS, rot = ANT_ROT) {
 
 module mock_battery(dim = BATT_DIM) {
 	if (MOCK_COMPONENTS)
-	color("yellow")
 	translate([0, 0, dim[2] / 2])
-	% cube(dim, true);
+	%rounded_cube(dim, 2);
 }
 
 module mock_battery_strap(dim = BATT_STRAP_DIM) {
 	translate([0, 0, FRAME_CLAMP_THICKNESS + FRAME_CLAMP_DEPTH + TOLERANCE_CLEAR + dim[1] / 2])
-	% cube([dim[0], BATT_DIM[1] * 1.5, dim[1]], true);
+	%cube([dim[0], BATT_DIM[1] * 1.5, dim[1]], true);
 }
 
 module mock_booms() {
@@ -182,20 +192,19 @@ module mock_escs(pos = ESC_POS, rot = ESC_ROT) {
 	if (MOCK_COMPONENTS)
 	translate(pos)
 	rotate(rot)
-	esc_racerstar_rs20ax4(center = "board");
+	esc_racerstar_rs20ax4();
 }
 
 module mock_fc(pos = FC_POS, rot = FC_ROT) {
 	if (MOCK_COMPONENTS)
 	translate(pos)
 	rotate(rot)
-	fc_omnibus_f3_pro(center = "board");
+	fc_omnibus_f3_pro();
 }
 
 module mock_motor() {
 	rotate([0, 0, BOOM_ANGLE])
-	motor_eachine_2204(detail = "low");
-	//motor_ldpower_mt1306(detail = "low");
+	motor_eachine_2204();
 }
 
 module mock_pdb(dim = PDB_DIM, rot = PDB_ROT) {

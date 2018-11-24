@@ -16,7 +16,6 @@ module canopy(
 		frame_height = FRAME_HEIGHT,
 		motor_mount_thickness = MOTOR_MOUNT_THICKNESS,
 		rounding = CANOPY_ROUNDING,
-		//screw_surround = FRAME_CLAMP_SCREW_SURROUND,
 		thickness = CANOPY_THICKNESS,
 	) {
 
@@ -38,11 +37,13 @@ module canopy(
 		}
 
 		// camera cutout
+		lens_surround_scale = 0.7;
 		pos_camera()
 		translate([-CAM_PIVOT_OFFSET, 0])
 		rotate([0, 90])
 		linear_extrude(10, center = true)
-		rounded_square([cam_dim[0], cam_dim[0]], 1);
+		rotate([0, 0, 90])
+		rounded_square([cam_dim[0] * 4 / 3, cam_dim[1]] * lens_surround_scale, 1);
 
 		// VTx antenna cutout
 		pos_ant(rot = [], z = false)
@@ -170,12 +171,13 @@ module canopy_solid(
 			reflect(x = 0, y = 0, z = true) {
 
 				// lens front
-				cam_protection = 0;
+				lens_surround_r = 1;
+				lens_surround_scale = 0.9;
 				translate([
-					cam_dim[2] / 2 + cam_protection,
-					cam_dim[0] / 2 + 2,
-					cam_dim[0] / 2 + 2])
-				corner(r = 1 + offset);
+					CAM_PIVOT_OFFSET + CAM_DIM[2] - lens_surround_r + CANOPY_CAM_OUTSET,
+					cam_dim[0] * 4 / 3 / 2 * lens_surround_scale,
+					cam_dim[1] / 2 * lens_surround_scale])
+				corner(r = lens_surround_r + offset);
 
 				// housing
 				translate([0, cam_dim[0] / 2, (cam_dim[1] + rounding) / 2])

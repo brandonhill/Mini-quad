@@ -218,31 +218,21 @@ module frame_top(
 		union() {
 			translate([0, 0, z])
 			intersection() {
-				linear_extrude(h, convexity = 3)
-				difference() {
-					union() {
-						smooth_acute(smoothing) {
-							shape_ant_mount_xy();
-							shape_buzzer_mount();
-							shape_camera_mount();
-							shape_frame_clamps(top = true);
-							shape_rx_mount();
-							shape_vtx_mount(holes = false);
-						}
-
-						// restore required detail lost by smoothing:
+				linear_extrude(h, convexity = 3) {
+					smooth_acute(smoothing) {
+						shape_ant_mount_xy();
 						shape_buzzer_mount();
 						shape_camera_mount();
+						shape_frame_clamps(top = true);
 						shape_rx_mount();
-						shape_vtx_mount();
+						shape_vtx_mount(holes = false);
 					}
 
-					// battery wire zip tie hole
-					mirror([1, 0])
-					pos_frame_screws(reflect = [false, false])
-					translate([-surround / 2, -(clamp_nut_dim[1] + surround * 1.5)])
-					rotate([0, 0, 90])
-					square([zip_tie_dim[0] + TOLERANCE_CLEAR * 2, zip_tie_dim[1] + TOLERANCE_CLEAR * 2], true);
+					// restore required detail lost by smoothing:
+					shape_buzzer_mount();
+					shape_camera_mount();
+					shape_rx_mount();
+					shape_vtx_mount();
 				}
 
 				// bevel camera mount front
@@ -268,6 +258,15 @@ module frame_top(
 				fc_mount_posts(holes = false);
 			}
 		}
+
+		// battery wire zip tie hole
+		translate([0, 0, FRAME_HEIGHT])
+		linear_extrude(FRAME_HEIGHT + 0.2, center = true)
+		mirror([1, 0])
+		pos_frame_screws(reflect = [false, false], show = [true])
+		translate([-surround / 2, -(clamp_nut_dim[1] + surround * 1.5)])
+		rotate([0, 0, 90])
+		square([zip_tie_dim[0] + TOLERANCE_CLEAR * 2, zip_tie_dim[1] + TOLERANCE_CLEAR * 2], true);
 
 		// booms
 		diff_booms(offset = TOLERANCE_CLOSE);
@@ -372,12 +371,12 @@ module shape_vtx_mount(
 	difference() {
 		if (!diff)
 		translate([clamp_width / 2, 0])
-		square([vtx_board_thickness + (TOLERANCE_FIT + mount_thickness) * 2 + clamp_width, vtx_dim[0] + clamp_width * 2], true);
+		square([vtx_board_thickness + (TOLERANCE_CLEAR + mount_thickness) * 2 + clamp_width, vtx_dim[0] + clamp_width * 2], true);
 
 		if (!diff)
-		square([10, vtx_dim[0] - 0.25], true);
+		square([10, vtx_dim[0] - TOLERANCE_CLEAR * 2], true);
 
 		if (holes || diff)
-		square([vtx_board_thickness + TOLERANCE_FIT * 2, vtx_dim[0] + TOLERANCE_FIT * 2], true);
+		square([vtx_board_thickness + TOLERANCE_CLEAR * 2, vtx_dim[0] + TOLERANCE_CLEAR * 2], true);
 	}
 }

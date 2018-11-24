@@ -122,6 +122,7 @@ module pos_frame_screws(
 		clamp_thickness = FRAME_CLAMP_THICKNESS,
 		dim = FRAME_DIM,
 		hull = false,
+		show = [true, true],
 		screw_dim = FRAME_CLAMP_SCREW_DIM,
 		reflect = [true, true], // [x, y]
 	) {
@@ -134,10 +135,12 @@ module pos_frame_screws(
 			+ boom_offset / tan(90 - boom_angle); // accommodate y (boom) offset
 
 		// front/back facing
+		if (show[0])
 		translate([x_outer, -boom_offset])
 		children();
 
 		// side facing
+		if (show[1])
 		//translate([x_inner + (x_outer - x_inner) * 0.5, boom_offset])
 		translate([x_outer, boom_offset])
 		children();
@@ -190,17 +193,23 @@ module pos_motor_mounts_front_top() {
 
 module pos_motor_screws(
 		boom_angle = BOOM_ANGLE,
+		hull = true,
 		mount_screw_spacing = MOTOR_MOUNT_RAD,
 	) {
-	for (i = [0 : len(mount_screw_spacing) - 1])
-	rotate([0, 0, 360 / (len(mount_screw_spacing) * 2) * i])
-	reflect()
-	hull() {
-		translate([min(mount_screw_spacing), 0])
+	if (hull)
+		for (i = [0 : len(mount_screw_spacing) - 1])
+		rotate([0, 0, 360 / (len(mount_screw_spacing) * 2) * i])
+		reflect()
+		hull() {
+			translate([min(mount_screw_spacing), 0])
+			children();
+			translate([max(mount_screw_spacing), 0])
+			children();
+		}
+	else
+		rotate([0, 0, BOOM_ANGLE])
+		pos_motor_eachine_2204_screws()
 		children();
-		translate([max(mount_screw_spacing), 0])
-		children();
-	}
 }
 
 module pos_motors(z = true) {

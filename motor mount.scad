@@ -164,7 +164,7 @@ module motor_mount(
 
 		// nut recesses
 		pos_motor_clamp_screws(struts = struts)
-		translate([0, 0, clamp_nut_dim[2] * 1/3]) // partial outset to accommodate crushing of conical seat
+		translate([0, 0, clamp_nut_dim[2] * 0.5]) // partial outset to accommodate crushing of conical seat
 		mirror([0, 0, 1])
 		nut_diff(clamp_nut_dim, conical = true, mock = false, tolerance = TOLERANCE_CLOSE);
 
@@ -274,7 +274,6 @@ module pos_motor_clamp_screws(
 			)
 		];
 	boom_screw_pos_y = (boom_dim[1] + screw_dim[0]) / 2 + TOLERANCE_CLOSE;
-	//strut_screw_pos_y = (strut_dim[1] + screw_dim[0]) / 2 + TOLERANCE_CLOSE;
 
 	pos_motor(z = z)
 	rotate([0, 0, boom_angle]) {
@@ -283,10 +282,8 @@ module pos_motor_clamp_screws(
 		if (show_outer)
 		reflect(x = false, y = !MOTOR_CLAMP_SCREW_SINGLE_OUTER)
 		translate([
-			//motor_rad - screw_surround - nut_dim[1] / 2,
 			motor_rad - screw_surround / 2 - nut_dim[1] / 2,
-			MOTOR_CLAMP_SCREW_SINGLE_OUTER ? 0 : boom_screw_pos_y
-			])
+			MOTOR_CLAMP_SCREW_SINGLE_OUTER ? 0 : boom_screw_pos_y])
 		children();
 
 		// inner
