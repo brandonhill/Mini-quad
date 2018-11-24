@@ -16,7 +16,7 @@ echo(str("Struts = ", STRUT_DIM));
 *rotate([180, 0])
 canopy();
 
-frame_bot();
+*frame_bot();
 
 *translate([0, 0, -FRAME_HEIGHT + FRAME_CLAMP_DEPTH + FRAME_CLAMP_THICKNESS])
 frame_top();

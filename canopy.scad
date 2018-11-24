@@ -1,5 +1,6 @@
 
 include <_setup.scad>;
+use <antenna mount.scad>;
 use <frame.scad>;
 
 module canopy(
@@ -12,7 +13,6 @@ module canopy(
 		clamp_thickness = FRAME_CLAMP_THICKNESS,
 		clamp_width = FRAME_CLAMP_WIDTH,
 		canopy_clip_width = CANOPY_CLIP_WIDTH,
-		dim = FRAME_DIM,
 		frame_height = FRAME_HEIGHT,
 		motor_mount_thickness = MOTOR_MOUNT_THICKNESS,
 		rounding = CANOPY_ROUNDING,
@@ -28,7 +28,7 @@ module canopy(
 				canopy_solid(offset = TOLERANCE_CLEAR + thickness);
 				canopy_solid(offset = TOLERANCE_CLEAR, inside = true);
 			}
-			*canopy_solid();
+			*canopy_solid(offset = TOLERANCE_CLEAR + thickness);
 
 			// clips
 			intersection() {
@@ -39,19 +39,16 @@ module canopy(
 
 		// camera cutout
 		pos_camera()
-		translate([
-			cam_dim[2] / 2 + rounding / 2,
-			0,
-			-cam_dim[1]  / 2])
-		capsule(h = cam_dim[1], r = cam_cutout_r);
+		translate([-CAM_PIVOT_OFFSET, 0])
+		rotate([0, 90])
+		linear_extrude(10, center = true)
+		rounded_square([cam_dim[0], cam_dim[0]], 1);
 
 		// VTx antenna cutout
-		hull()
-		for (z = [0, frame_height])
-		translate([-dim[0] / 2, 0, z])
-		rotate([0, 90])
-		//cylinder_true(h = dim[0], r = ant_nut_dim[1] / 2 + TOLERANCE_CLEAR * 2, $fn = 6);
-		cylinder_true(h = dim[0], r = ant_nut_dim[1] / 2 + TOLERANCE_CLEAR * 2 + ant_mount_surround);
+		pos_ant(rot = [], z = false)
+		rotate([0, -90])
+		linear_extrude(20, center = true, convexity = 2)
+		shape_ant_mount_yz(offset_xy = TOLERANCE_CLEAR, offset_z = TOLERANCE_CLEAR, full_width = false);
 
 		// boom notches
 		diff_booms(offset = TOLERANCE_CLEAR);
@@ -69,7 +66,7 @@ module canopy(
 		// cut excess
 		translate([0, 0, -50]) {
 			// front
-			translate([(SIZE[0] + FRAME_DIM[0]) / 2, 0, 0])
+			translate([(SIZE[0] + FRAME_DIM[0]) / 2, 0, clamp_thickness])
 			cube([SIZE[0], SIZE[1], 100], true);
 
 			// middle
@@ -84,8 +81,9 @@ module canopy(
 			translate([-(SIZE[0] + FRAME_DIM[0]) / 2, 0, frame_height - clamp_thickness + TOLERANCE_CLEAR])
 			hull() {
 				cube([SIZE[0], FRAME_DIM[1] + (clamp_width - canopy_clip_width) * 2, 100], true);
-				translate([0, 0, clamp_thickness])
-				cube([SIZE[0], SMA_NUT_DIM[0] + (TOLERANCE_CLEAR + ANT_MOUNT_SURROUND) * 2, 100], true);
+
+				translate([0, 0, clamp_thickness + TOLERANCE_CLEAR])
+				cube([SIZE[0], SMA_NUT_DIM[1] + (TOLERANCE_CLEAR + ANT_MOUNT_SURROUND) * 2, 100], true);
 			}
 		}
 
@@ -160,6 +158,10 @@ module canopy_solid(
 	h_frame = clamp_thickness + clamp_depth;
 	r = rounding + offset;
 
+	module corner(r = r, base = false) {
+		sphere(r, $fn = base ? $fn_top : $fn);
+	}
+
 	hull()
 	reflect(x = false) {
 
@@ -168,21 +170,21 @@ module canopy_solid(
 			reflect(x = 0, y = 0, z = true) {
 
 				// lens front
+				cam_protection = 0;
 				translate([
-					cam_dim[2] / 2 - rounding
-						+ 2, // add protection
-					cam_dim[0] / 2 - rounding,
-					cam_dim[1] / 2 - rounding])
-				sphere(r);
+					cam_dim[2] / 2 + cam_protection,
+					cam_dim[0] / 2 + 2,
+					cam_dim[0] / 2 + 2])
+				corner(r = 1 + offset);
 
 				// housing
 				translate([0, cam_dim[0] / 2, (cam_dim[1] + rounding) / 2])
-				sphere(r);
+				corner();
 			}
 
 			// mount
 			translate([0, cam_dim[0] / 2 + rounding])
-			sphere(r);
+			corner();
 		}
 
 		// top
@@ -190,17 +192,17 @@ module canopy_solid(
 
 			// ease angle at back (for printing)
 			translate([ant_pos[0] + rounding * 2, 0])
-			sphere(r, $fn = $fn_top);
+			corner(base = true);
 
 			// fc
 			reflect(y = 0)
 			translate(-[rounding, rounding] / 2)
 			translate([fc_dim[0], fc_dim[1]] / 2)
-			sphere(r, $fn = $fn_top);
+			corner(base = true);
 
 			// ease angle at front (for printing)
 			translate([fc_dim[0] / 2 + (cam_pos[0] - fc_dim[0] / 2) / 2, 0])
-			sphere(r, $fn = $fn_top);
+			corner(base = true);
 		}
 
 		difference() {
@@ -213,16 +215,16 @@ module canopy_solid(
 				frame_top();
 
 				// vtx ant mount
-				pos_ant()
+				*pos_ant()
 				translate([0, 0, -offset - TOLERANCE_CLEAR])
 				cylinder(
 					h = ant_mount_thickness - (inside ? thickness : 0) + offset * 2,
 					r = ant_nut_dim[0] / 2 + ant_mount_surround + TOLERANCE_CLEAR + thickness);
+				ant_mount(offset_xy = offset);
 			}
 
 			// cut off back part of VTX ant mount
-			if (!inside)
-			translate([-50 + ant_pos[0] - ant_mount_thickness + thickness + TOLERANCE_CLEAR - offset, 0])
+			translate([-50 + ant_pos[0] - ant_mount_thickness + (inside ? thickness : 0) - TOLERANCE_CLEAR, 0])
 			cube(100, true);
 		}
 

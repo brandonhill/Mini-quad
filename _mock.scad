@@ -21,7 +21,7 @@ use <frame.scad>;
 use <landing gear.scad>;
 use <motor mount.scad>;
 
-//$fs = 1;
+$fs = 4;
 
 print([
 	"SIZE_DIA = ", SIZE_DIA
@@ -35,8 +35,7 @@ print([
 print(["Booms = ", BOOM_DIM, ", natural = ", BOOM_LENGTH_NAT]);
 print(["Struts = ", STRUT_DIM, ", natural = ", STRUT_LENGTH_NAT]);
 
-*
-pos_landing_gear()
+*pos_landing_gear()
 landing_gear();
 
 *mock_battery();
@@ -60,7 +59,8 @@ translate([0, 0, LG_HEIGHT]) {
 	mock_camera();
 
 	color(PRINT_COLOUR_CANOPY)
-	show_half(r = [0, 0, 0])
+	//show_half()
+	//show_half(r = [0, 0, 90])
 	canopy();
 
 	mock_escs();
@@ -73,7 +73,7 @@ translate([0, 0, LG_HEIGHT]) {
 	color(PRINT_FRAME_COLOUR_TOP)
 	frame_top();
 
-	*mock_battery_strap();
+	mock_battery_strap();
 
 	mock_booms();
 
@@ -133,7 +133,7 @@ translate([0, 0, LG_HEIGHT]) {
 
 			mock_motor();
 
-			translate([0, 0, sum(MOTOR_DIM[1]) - MOTOR_DIM[1][2] / 2])
+			translate([0, 0, MOTOR_HEIGHT + 5])
 			mock_prop();
 		}
 	}
@@ -155,7 +155,6 @@ module mock_battery(dim = BATT_DIM) {
 }
 
 module mock_battery_strap(dim = BATT_STRAP_DIM) {
-	if (MOCK_COMPONENTS)
 	translate([0, 0, FRAME_CLAMP_THICKNESS + FRAME_CLAMP_DEPTH + TOLERANCE_CLEAR + dim[1] / 2])
 	% cube([dim[0], BATT_DIM[1] * 1.5, dim[1]], true);
 }
@@ -183,33 +182,20 @@ module mock_escs(pos = ESC_POS, rot = ESC_ROT) {
 	if (MOCK_COMPONENTS)
 	translate(pos)
 	rotate(rot)
-	esc_racerstar_rs20ax4();
+	esc_racerstar_rs20ax4(center = "board");
 }
 
 module mock_fc(pos = FC_POS, rot = FC_ROT) {
 	if (MOCK_COMPONENTS)
 	translate(pos)
 	rotate(rot)
-	fc_omnibus_f3_pro();
+	fc_omnibus_f3_pro(center = "board");
 }
 
-module mock_motor(d = MOTOR_DIM, shaft_r = MOTOR_SHAFT_RAD) {
-// 	% cylinder(h = h, r = r);
-	if (MOCK_COMPONENTS)
-	motor_generic(
-		height = d[1][1],
-		rad = d[0] / 2,
-		mount_arm_width = 0,
-		mount_height = d[1][0],
-		mount_rad = d[0] / 2,
-		mount_holes = 0,
-		mount_hole_rad = 2,
-		mount_hole_thickness = 0,
-		shaft_height = d[1][2],
-		shaft_rad = shaft_r,
-		col_bell = COLOUR_GREY_DARK,
-		col_mount = COLOUR_GREY
-	);
+module mock_motor() {
+	rotate([0, 0, BOOM_ANGLE])
+	motor_eachine_2204(detail = "low");
+	//motor_ldpower_mt1306(detail = "low");
 }
 
 module mock_pdb(dim = PDB_DIM, rot = PDB_ROT) {
@@ -220,12 +206,10 @@ module mock_pdb(dim = PDB_DIM, rot = PDB_ROT) {
 }
 
 module mock_prop(r = PROP_RAD) {
-	if (MOCK_COMPONENTS)
-	%
-	color("aqua")
+	//if (MOCK_COMPONENTS)
 	rotate_extrude()
 	translate([r, 0])
-	circle(0.1);
+	circle(0.25);
 }
 
 module mock_rx(dim = RX_DIM, pos = RX_POS, rot = RX_ROT) {

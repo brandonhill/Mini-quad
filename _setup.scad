@@ -127,10 +127,19 @@ module pos_frame_screws(
 	) {
 
 	module pair() {
-		translate([
-			min(dim[0], dim[1]) / 2 / sin(boom_angle), // place at frame corner
-			-((boom_dim[1] + screw_dim[0]) / 2 + TOLERANCE_CLOSE)
-		])
+		boom_offset = (boom_dim[1] + screw_dim[0]) / 2 + TOLERANCE_CLOSE;
+		x_outer = min(dim[0], dim[1]) / 2 / sin(boom_angle); // at frame corner
+		x_inner =
+			(BATT_STRAP_DIM[0] + screw_dim[0]) / 2 / sin(90 - boom_angle) // at edge of battery strap
+			+ boom_offset / tan(90 - boom_angle); // accommodate y (boom) offset
+
+		// front/back facing
+		translate([x_outer, -boom_offset])
+		children();
+
+		// side facing
+		//translate([x_inner + (x_outer - x_inner) * 0.5, boom_offset])
+		translate([x_outer, boom_offset])
 		children();
 	}
 
@@ -145,13 +154,18 @@ module pos_frame_screws(
 			children();
 		}
 	}
+
+	// alternate: single centre screw (probably too weak)
+	*reflect(y = false)
+	translate([(BATT_STRAP_DIM[0] + screw_dim[0]) / 2, 0])
+	children();
 }
 
 module pos_landing_gear(
 		boom_dim = BOOM_DIM,
 		clamp_thickness = FRAME_CLAMP_THICKNESS,
 		h = LG_HEIGHT,
-		motor_rad = MOTOR_MOUNT_RAD,
+		motor_rad = MOTOR_RAD,
 		width = LG_WIDTH,
 	) {
 	pos_booms(reflect = [false, true])
@@ -176,14 +190,15 @@ module pos_motor_mounts_front_top() {
 
 module pos_motor_screws(
 		boom_angle = BOOM_ANGLE,
-		mount_screw_spacing = MOTOR_SCREW_SPACING,
+		mount_screw_spacing = MOTOR_MOUNT_RAD,
 	) {
-	for (i = [0 : 3])
-	rotate([0, 0, 45 + boom_angle + 90 * i])
+	for (i = [0 : len(mount_screw_spacing) - 1])
+	rotate([0, 0, 360 / (len(mount_screw_spacing) * 2) * i])
+	reflect()
 	hull() {
-		translate([mount_screw_spacing[0] / 2, 0])
+		translate([min(mount_screw_spacing), 0])
 		children();
-		translate([mount_screw_spacing[1] / 2, 0])
+		translate([max(mount_screw_spacing), 0])
 		children();
 	}
 }
@@ -205,8 +220,6 @@ module pos_rx(
 }
 
 module pos_struts(
-		dim = STRUT_DIM,
-		motor_mount_rad = MOTOR_MOUNT_RAD,
 		pos = STRUT_POS,
 		struts = [true, true],
 		reflect = [true, false],
@@ -237,7 +250,7 @@ module shape_booms(
 		clamp_width = FRAME_CLAMP_WIDTH,
 		offset = 0,
 	) {
-//	pos_booms(offset = clamp_width + TOLERANCE_CLOSE + (BOOM_LENGTH_NAT - BOOM_LENGTH))
+	//pos_booms(offset = clamp_width + TOLERANCE_CLOSE + (BOOM_LENGTH_NAT - BOOM_LENGTH))
 	pos_booms()
 	translate([dim[0] / 2, 0])
 	square([dim[0] + offset * 2, dim[1] + offset * 2], true);

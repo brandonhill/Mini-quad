@@ -69,16 +69,10 @@ module frame_bot(
 		batt_strap_dim = BATT_STRAP_DIM,
 		clamp_depth = FRAME_CLAMP_DEPTH,
 		clamp_thickness = FRAME_CLAMP_THICKNESS,
-		frame_dim = FRAME_DIM,
-		rx_ant_mount_surround = RX_ANT_MOUNT_SURROUND,
-		zip_tie_dim = ZIP_TIE_DIM,
 	) {
 
 	battery_strap_notch = batt_strap_dim[1] / 3;
 	h = clamp_thickness + clamp_depth;
-	rx_ant_mount_dim = [
-		zip_tie_dim[0] + (TOLERANCE_CLEAR + rx_ant_mount_surround) * 2,
-		zip_tie_dim[1] + (TOLERANCE_CLEAR + rx_ant_mount_surround) * 2];
 
 	module shape() {
 
@@ -91,8 +85,7 @@ module frame_bot(
 
 					// rx ant zip tie mounts
 					pos_rx_ant_mount_holes()
-					translate([0, -rx_ant_mount_dim[1] / 2])
-					square([rx_ant_mount_dim[0], rx_ant_mount_dim[1] * 2], true);
+					square([RX_ANT_MOUNT_DIM[0], RX_ANT_MOUNT_DIM[1] * 2], true);
 				}
 
 				// battery strap notches
@@ -105,9 +98,9 @@ module frame_bot(
 				}
 
 				// rx ant zip tie mount face
-				*pos_rx_ant_mount_holes()
-				translate([0, rx_ant_mount_dim[1], 0])
-				square(rx_ant_mount_dim, true);
+				pos_rx_ant_mount_holes()
+				translate([0, RX_ANT_MOUNT_DIM[1]])
+				square(RX_ANT_MOUNT_DIM, true);
 			}
 		}
 
@@ -126,7 +119,7 @@ module frame_bot(
 
 			// rx ant zip tie holes
 			pos_rx_ant_mount_holes()
-			square([zip_tie_dim[0] + TOLERANCE_CLEAR * 2, zip_tie_dim[1] + TOLERANCE_CLEAR * 2], true);
+			square([ZIP_TIE_DIM[0] + TOLERANCE_CLEAR * 2, ZIP_TIE_DIM[1] + TOLERANCE_CLEAR * 2], true);
 		}
 
 		// vtx mount
@@ -153,10 +146,10 @@ module frame_bot(
 
 		// decrease rx ant mount height
 		pos_rx_ant_mount_holes()
-		translate([0, rx_ant_mount_dim[1] / 2, h * 1.5 - zip_tie_dim[1] * 2])
+		translate([0, RX_ANT_MOUNT_DIM[1] / 2, h * 1.5 - ZIP_TIE_DIM[1] * 2])
 		cube([
-			zip_tie_dim[0] + TOLERANCE_CLEAR * 2,
-			rx_ant_mount_dim[1],
+			ZIP_TIE_DIM[0] + TOLERANCE_CLEAR * 2,
+			RX_ANT_MOUNT_DIM[1],
 			h], true);
 
 		// screw holes
@@ -229,7 +222,7 @@ module frame_top(
 				difference() {
 					union() {
 						smooth_acute(smoothing) {
-							shape_ant_mount();
+							shape_ant_mount_xy();
 							shape_buzzer_mount();
 							shape_camera_mount();
 							shape_frame_clamps(top = true);
@@ -258,29 +251,7 @@ module frame_top(
 			}
 
 			// VTx ant mount
-			intersection() {
-				hull() {
-					r = ant_nut_dim[1] / 2 + ant_mount_surround;
-					pos_ant(pos = ant_pos)
-					cylinder(h = 20, r = r, center = true);
-
-					intersection() {
-						pos_ant(pos = ant_pos)
-						translate([-5, 0])
-						cube([10, r * 2.5, 20], true);
-
-						translate([0, 0, z])
-						linear_extrude(h, convexity = 3)
-						smooth_acute(smoothing)
-						shape_ant_mount();
-					}
-				}
-
-				translate([0, 0, z])
-				linear_extrude(20, convexity = 2)
-				smooth_acute(smoothing)
-				shape_ant_mount();
-			}
+			ant_mount(smoothing = smoothing);
 
 			// stack mount posts
 			translate([0, 0, z + h])
@@ -304,7 +275,7 @@ module frame_top(
 		// camera mount holes
 		pos_camera(rot = [0, 30])
 		rotate([90, 0])
-		cylinder_true(h = cam_dim[0] * 2, r = cam_screw_dim[0] / 2, center = true, $fn = 6);
+		cylinder_true(h = cam_dim[0] * 2, r = cam_screw_dim[0] / 2, $fn = 6);
 
 		// canopy clip recesses
 		canopy_clips(offset = TOLERANCE_FIT);
@@ -336,17 +307,13 @@ module frame_top(
 	}
 }
 
-module pos_rx_ant_mount_holes(
-		boom_angle = BOOM_ANGLE,
-		boom_dim = BOOM_DIM,
-		clamp_width = FRAME_CLAMP_WIDTH,
-		dim = FRAME_DIM,
-		zip_tie_dim = ZIP_TIE_DIM,
-	) {
+module pos_rx_ant_mount_holes() {
 	reflect(x = false)
-	translate(dim / 2)
-	rotate([0, 0, boom_angle])
-	translate([0, boom_dim[1] / 2 + TOLERANCE_FIT + clamp_width + zip_tie_dim[1] / 2])
+	translate(FRAME_DIM / 2)
+	rotate([0, 0, BOOM_ANGLE])
+	translate([
+		-RX_ANT_MOUNT_DIM[0] / 2 + FRAME_CLAMP_SCREW_DIM[0] / 2 + TOLERANCE_CLOSE + FRAME_CLAMP_SCREW_SURROUND,
+		BOOM_DIM[1] / 2 + FRAME_CLAMP_SCREW_DIM[0] + TOLERANCE_FIT + FRAME_CLAMP_WIDTH + ZIP_TIE_DIM[1] / 2])
 	children();
 }
 

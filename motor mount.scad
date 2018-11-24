@@ -112,7 +112,7 @@ module motor_mount(
 		frame_clamp_thickness = FRAME_CLAMP_THICKNESS,
 		frame_clamp_width = FRAME_CLAMP_WIDTH,
 		frame_height = FRAME_HEIGHT,
-		motor_rad = MOTOR_MOUNT_RAD,
+		motor_rad = MOTOR_RAD,
 		motor_screw_dim = MOTOR_SCREW_DIM,
 		struts = [true, true],
 		surround = FRAME_CLAMP_SCREW_SURROUND,
@@ -197,7 +197,7 @@ module motor_mount(
 
 module motor_soft_mount(
 		clearance_dim = MOTOR_CLEARANCE_DIM,
-		mount_rad = MOTOR_MOUNT_RAD,
+		mount_rad = MOTOR_RAD,
 		motor_screw_dim = MOTOR_SCREW_DIM,
 		thickness = MOTOR_SOFT_MOUNT_THICKNESS,
 	) {
@@ -222,7 +222,7 @@ module pos_motor_bumper(
 		boom_angle = BOOM_ANGLE,
 		clamp_thickness = FRAME_CLAMP_THICKNESS,
 		h = MOTOR_BUMPER_HEIGHT,
-		mount_rad = MOTOR_MOUNT_RAD,
+		mount_rad = MOTOR_RAD,
 		mount_thickness = MOTOR_MOUNT_THICKNESS,
 		nut_dim = FRAME_CLAMP_NUT_DIM,
 		screw_surround = FRAME_CLAMP_SCREW_SURROUND,
@@ -242,7 +242,7 @@ module pos_motor_bumper(
 module pos_motor_clamp_screws(
 		boom_angle = BOOM_ANGLE,
 		boom_dim = BOOM_DIM,
-		mount_rad = MOTOR_MOUNT_RAD,
+		motor_rad = MOTOR_RAD,
 		nut_dim = FRAME_CLAMP_NUT_DIM,
 		screw_dim = FRAME_CLAMP_SCREW_DIM,
 		screw_surround = FRAME_CLAMP_SCREW_SURROUND,
@@ -283,8 +283,8 @@ module pos_motor_clamp_screws(
 		if (show_outer)
 		reflect(x = false, y = !MOTOR_CLAMP_SCREW_SINGLE_OUTER)
 		translate([
-			//mount_rad - screw_surround - nut_dim[1] / 2,
-			mount_rad - screw_surround / 2 - nut_dim[1] / 2,
+			//motor_rad - screw_surround - nut_dim[1] / 2,
+			motor_rad - screw_surround / 2 - nut_dim[1] / 2,
 			MOTOR_CLAMP_SCREW_SINGLE_OUTER ? 0 : boom_screw_pos_y
 			])
 		children();
@@ -313,7 +313,7 @@ module pos_motor_clamp_screws(
 module shape_motor(
 		a = MOTOR_OUTSET_ANGLE,
 		boom_angle = BOOM_ANGLE,
-		mount_rad = MOTOR_MOUNT_RAD,
+		motor_rad = MOTOR_RAD,
 		nut_dim = FRAME_CLAMP_NUT_DIM,
 		outset = MOTOR_MOUNT_OUTSET,
 		screw_surround = FRAME_CLAMP_SCREW_SURROUND,
@@ -322,10 +322,10 @@ module shape_motor(
 	// mount area
 	intersection() {
 		pos_motor()
-		circle(mount_rad);
+		circle(motor_rad);
 
 		hull()
-		for (x = [0, mount_rad])
+		for (x = [0, motor_rad])
 		rotate([0, 0, boom_angle])
 		translate([x, 0])
 		rotate([0, 0, -boom_angle])
@@ -342,7 +342,7 @@ module shape_motor(
 	if (outset > 0)
 	*pos_motor()
 	rotate([0, 0, boom_angle - a / 2])
-	segment(a, mount_rad + outset);
+	segment(a, motor_rad + outset);
 }
 
 module shape_motor_boom_clamp(
